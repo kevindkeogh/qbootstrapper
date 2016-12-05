@@ -69,6 +69,9 @@ The project tries to maintain few external dependences. As of now, it is limited
 I won't put this on pypa until there is a lot more functionality. In order to install, just clone the repository.
 ```sh
 git clone https://github.com/kevindkeogh/qbootstrapper.git
+cd qbootstrapper
+pyvenv qb
+source qb/bin/activate
 pip3 install -r requirements.txt
 python3 -i examples.py
 >>> eonia.zeros()
