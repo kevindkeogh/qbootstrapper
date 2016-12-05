@@ -20,7 +20,7 @@ eonia_conventions = {'fixed_length': 12,
                      'float_payment_adjustment': 'following'
                      }
                      
-eonia_cash = qb.LIBORInstrument(curve_effective,
+eonia_cash = qb.LIBORInstrument(curve_date,
                                 -0.00293,
                                 5,
                                 eonia,
