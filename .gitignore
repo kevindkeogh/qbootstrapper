@@ -89,3 +89,8 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# vim temp files
+*~
+*.swp
+*.swo
