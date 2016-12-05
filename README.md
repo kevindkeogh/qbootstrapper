@@ -68,7 +68,7 @@ The project tries to maintain few external dependences. As of now, it is limited
 ## Installation
 I won't put this on pypa until there is a lot more functionality. In order to install, just clone the repository.
 ```sh
-git clone https://github.com/kevindkeogh/qlib-bootstrapper.git
+git clone https://github.com/kevindkeogh/qbootstrapper.git
 pip3 install -r requirements.txt
 python3 -i examples.py
 >>> eonia.zeros()
