@@ -570,7 +570,9 @@ for (maturity, rate) in usdlibor_swap_instruments[:2]:
                                  **usdlibor_conventions)
     usdlibor_short.add_instrument(inst)
 
-fedfunds_libor_libor_swaps = usdlibor_swap_instruments[2:4] + [usdlibor_swap_instruments[6]] + usdlibor_swap_instruments[8:]
+fedfunds_libor_libor_swaps =  usdlibor_swap_instruments[2:4] 
+fedfunds_libor_libor_swaps.extend([usdlibor_swap_instruments[6]])
+fedfunds_libor_libor_swaps.extend(usdlibor_swap_instruments[8:])
 
 fedfunds_libor = qb.SimultaneousStrippedCurve(curve_effective,
                                               fedfunds_short,
