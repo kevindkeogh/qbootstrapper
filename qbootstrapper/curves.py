@@ -251,3 +251,17 @@ class SimultaneousStrippedCurve(Curve):
                 self.projection_curve.curve = np.append(self.projection_curve.curve, array)
                 
         self._built = True
+
+    def view(self):
+        '''
+        '''
+        raise NotImplementedError('Please view the individual curves using the'
+                                  ' self.discount_curve and'
+                                  ' self.projection_curve syntax')
+
+    def zeros(self):
+        '''
+        '''
+        raise NotImplementedError('Please view the individual curves using the'
+                                  ' self.discount_curve and'
+                                  ' self.projection_curve syntax')
