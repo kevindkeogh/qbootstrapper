@@ -153,7 +153,7 @@ fedfunds_short_instruments = [(datetime.datetime(2016, 8,  5),  0.00378, 1),
                               (datetime.datetime(2017, 1,  5),  0.00365, 6),
                               (datetime.datetime(2017, 4,  5),  0.00371, 9)]
 
-fedfunds_instruments = [(datetime.datetime(2017, 3,  5),  0.003780),
+fedfunds_instruments = [(datetime.datetime(2017, 7,  5),  0.003780),
                         (datetime.datetime(2018, 1,  5),  0.003950),
                         (datetime.datetime(2018, 7,  5),  0.004220),
                         (datetime.datetime(2019, 7,  5),  0.004850),
@@ -516,61 +516,67 @@ for maturity, rate in sonia_swap_data:
                                               rate,
                                               sonia,
                                               **sonia_conventions))
-remove = '''
+
 fedfunds_short = qb.Curve(curve_effective)
 
-fedfunds_short_instruments = [
+fedfunds_short_short_instruments = [
     fedfunds_cash,
     fedfunds_swap_onew,
     fedfunds_swap_twow,
-    fedfunds_swap_threew,
-    fedfunds_swap_onem,
-    fedfunds_swap_twom,
-    fedfunds_swap_threem,
-    fedfunds_swap_fourm,
-    fedfunds_swap_fivem,
-    fedfunds_swap_sixm,
-    fedfunds_swap_ninem,
-    fedfunds_swap_oney,
-    fedfunds_swap_eighteenm,
-    fedfunds_swap_twoy,
-    fedfunds_swap_threey,
-    fedfunds_swap_foury,
-    fedfunds_swap_fivey]
+    fedfunds_swap_threew]
 
-for inst in fedfunds_short_instruments:
+for inst in fedfunds_short_short_instruments:
     inst.curve = fedfunds_short
+    fedfunds_short.add_instrument(inst)
+
+for (maturity, rate, months) in fedfunds_short_instruments:
+    inst = qb.OISSwapInstrument(effective,
+                                maturity,
+                                rate,
+                                fedfunds_short,
+                                fixed_length=months,
+                                float_length=months,
+                                **fedfunds_short_conventions)
+    fedfunds_short.add_instrument(inst)
+
+for (maturity, rate) in fedfunds_instruments[:6]:
+    inst = qb.OISSwapInstrument(effective,
+                                maturity,
+                                rate,
+                                fedfunds_short,
+                                **fedfunds_conventions)
     fedfunds_short.add_instrument(inst)
 
 usdlibor_short = qb.LIBORCurve(curve_effective, discount_curve=fedfunds_short)
 
-usdlibor_short_instruments = [
-    usdlibor_cash_onew,
-    usdlibor_cash_onem,
-    usdlibor_cash_twom,
-    usdlibor_cash_threem,
-    usdlibor_future_one,
-    usdlibor_future_two,
-    usdlibor_future_three,
-    usdlibor_future_four,
-    usdlibor_future_five,
-    usdlibor_future_six,
-    usdlibor_future_seven,
-    usdlibor_future_eight,
-    usdlibor_future_nine,
-    usdlibor_future_ten,
-    usdlibor_future_eleven,
-    usdlibor_future_twelve,
-    usdlibor_swap_foury,
-    usdlibor_swap_fivey]
-
-for inst in usdlibor_short_instruments:
-    inst.curve = usdlibor_short
+for (length, length_type, rate) in usdlibor_cash_instruments:
+    inst = qb.LIBORInstrument(effective,
+                              rate,
+                              length,
+                              usdlibor_short,
+                              length_type=length_type,
+                              payment_adjustment='following')
     usdlibor_short.add_instrument(inst)
 
+for (start_date, end_date, price) in usdlibor_futures_instruments:
+    inst = qb.FuturesInstrumentByDates(start_date, end_date, price, usdlibor_short)
+    usdlibor_short.add_instrument(inst)
+
+for (maturity, rate) in usdlibor_swap_instruments[:2]:
+    inst = qb.LIBORSwapInstrument(effective,
+                                 maturity,
+                                 rate,
+                                 usdlibor_short,
+                                 **usdlibor_conventions)
+    usdlibor_short.add_instrument(inst)
+
+fedfunds_libor_libor_swaps =  usdlibor_swap_instruments[2:4] 
+fedfunds_libor_libor_swaps.extend([usdlibor_swap_instruments[6]])
+fedfunds_libor_libor_swaps.extend(usdlibor_swap_instruments[8:])
+
 fedfunds_libor = qb.SimultaneousStrippedCurve(curve_effective,
-                                                  fedfunds_short,
-                                                  usdlibor_short)
+                                              fedfunds_short,
+                                              usdlibor_short)
 
 fedfunds_libor_swap_data = [(datetime.datetime(2022, 7,  5), 0.003400),
                             (datetime.datetime(2023, 7,  5), 0.003425),
@@ -583,28 +589,20 @@ fedfunds_libor_swap_data = [(datetime.datetime(2022, 7,  5), 0.003400),
                             (datetime.datetime(2056, 7,  5), 0.003613),
                             (datetime.datetime(2066, 7,  5), 0.003613)]
 
-usdlibor_simultaneous_insts = [usdlibor_swap_sixy,
-                               usdlibor_swap_seveny,
-                               usdlibor_swap_teny,
-                               usdlibor_swap_twelvey,
-                               usdlibor_swap_fifteeny,
-                               usdlibor_swap_twentyy,
-                               usdlibor_swap_twentyfivey,
-                               usdlibor_swap_thirtyy,
-                               usdlibor_swap_fortyy,
-                               usdlibor_swap_fiftyy]
-
 for idx, (maturity, rate) in enumerate(fedfunds_libor_swap_data):
     ois_inst = qb.AverageIndexBasisSwapInstrument(effective,
-                                                     maturity,
-                                                     fedfunds_libor,
-                                                     leg_one_spread=rate)
-    libor_inst = usdlibor_simultaneous_insts[idx]
+                                                  maturity,
+                                                  fedfunds_libor,
+                                                  leg_one_spread=rate)
+    libor_inst = qb.LIBORSwapInstrument(effective,
+                                        fedfunds_libor_libor_swaps[idx][0],
+                                        fedfunds_libor_libor_swaps[idx][1],
+                                        usdlibor,
+                                        **usdlibor_conventions)
     instrument_pair = qb.SimultaneousInstrument(ois_inst,
-                                                   libor_inst,
-                                                   fedfunds_libor)
+                                                libor_inst,
+                                                fedfunds_libor)
     fedfunds_libor.add_instrument(instrument_pair)
-'''
 
 # eonia.build()
 # eonia.view()
