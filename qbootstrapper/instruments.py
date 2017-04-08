@@ -20,7 +20,7 @@ import sys
 import time
 
 # qlib libraries
-from .swapscheduler import Schedule
+from qbootstrapper.swapscheduler import Schedule
 
 if sys.version_info > (3,):
     long = int

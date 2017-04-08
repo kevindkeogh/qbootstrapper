@@ -5,6 +5,6 @@ VERSION = '0.1'
 setup(
         name='qbootstrapper',
         version=VERSION,
-        packages='qboostrapper',
+        packages=['qboostrapper'],
         license='MIT',
      )
