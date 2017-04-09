@@ -15,7 +15,7 @@ import copy
 import datetime
 import numpy as np
 import operator
-import scipy
+import scipy.interpolate
 import time
 
 # qlib libraries
