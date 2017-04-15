@@ -13,4 +13,5 @@ setup(
             'numpy',
             'python-dateutil',
             ],
+        license=LICENSE,
      )
