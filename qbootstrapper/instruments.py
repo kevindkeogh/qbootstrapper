@@ -110,16 +110,16 @@ class Instrument(object):
             effective = datetime.datetime.fromtimestamp(timestamp)
             timestamp = maturity.astype('<M8[s]').astype(np.uint64)
             maturity = datetime.datetime.fromtimestamp(timestamp)
-        if basis == 'Act360':
+        if basis.lower() == 'act360':
             accrual_period = (maturity - effective).days / 360
-        elif basis == 'Act365':
+        elif basis.lower() == 'act365':
             accrual_period = (maturity - effective).days / 365
-        elif basis == '30360':
+        elif basis.lower() == '30360':
             start, end = min(effective.day, 30), min(maturity.day, 30)
             months = (30 * (maturity.month - effective.month) +
                       360 * (maturity.year - effective.year))
             accrual_period = (end - start + months) / 360
-        elif basis == '30E360':
+        elif basis.lower() == '30e360':
             start, end = max(0, 30 - effective.day), min(30, maturity.day)
             months = 30 * (maturity.month - effective.month - 1)
             years = 360 * (maturity.year - effective.year)
