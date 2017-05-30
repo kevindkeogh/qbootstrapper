@@ -9,6 +9,7 @@ curve, as that uses Average Index swaps, which have not been implemented.
 The difference is attributable to that adjustment in instruments.
 '''
 import datetime
+import copy
 
 import qbootstrapper as qb
 
@@ -526,8 +527,9 @@ fedfunds_short_short_instruments = [
     fedfunds_swap_threew]
 
 for inst in fedfunds_short_short_instruments:
-    inst.curve = fedfunds_short
-    fedfunds_short.add_instrument(inst)
+    new_inst = copy.deepcopy(inst)
+    new_inst.curve = fedfunds_short
+    fedfunds_short.add_instrument(new_inst)
 
 for (maturity, rate, months) in fedfunds_short_instruments:
     inst = qb.OISSwapInstrument(effective,
