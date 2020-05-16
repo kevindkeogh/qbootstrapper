@@ -75,7 +75,7 @@ class FuturesInstrumentByDates(Instrument):
         return np.log(discount_factor)
 
 
-class FuturesInstrumentByIMMCode(Instrument):
+class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
     """Futures instrument class for use with Swap Curve bootstrapper.
 
     This class can be utilized to hold the market data and conventions
@@ -113,16 +113,8 @@ class FuturesInstrumentByIMMCode(Instrument):
         self.curve = curve
 
         self.effective = imm_date(code)
-        self.maturity = super(FuturesInstrumentByIMMCode, self)._timedelta(3, "M")
-        self.accrual_period = super(FuturesInstrumentByDates, self).daycount(
+        self.maturity = self.effective + super(FuturesInstrumentByIMMCode, self)._timedelta(3, "M")
+        self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )
         self.instrument_type = "futures"
-
-    def discount_factor(self):
-        """Method for returning the discount factor for a future
-        """
-        discount_factor = self.curve.discount_factor(self.effective) / (
-            1 + (self.rate * self.accrual_period)
-        )
-        return np.log(discount_factor)

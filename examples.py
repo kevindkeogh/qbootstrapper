@@ -127,18 +127,18 @@ fedfunds_long_swaps = [
 usdlibor_cash_instruments = [(3, "months", 0.0190838)]
 
 usdlibor_futures_instruments = [
-    (datetime.datetime(2020, 3, 18), datetime.datetime(2020, 6, 18), 98.26531667),
-    (datetime.datetime(2020, 6, 17), datetime.datetime(2020, 9, 17), 98.31094247),
-    (datetime.datetime(2020, 9, 16), datetime.datetime(2020, 12, 16), 98.36682733),
-    (datetime.datetime(2020, 12, 16), datetime.datetime(2021, 3, 16), 98.3829655),
-    (datetime.datetime(2021, 3, 17), datetime.datetime(2021, 6, 17), 99.44435054),
-    (datetime.datetime(2021, 6, 16), datetime.datetime(2021, 9, 16), 99.44597773),
-    (datetime.datetime(2021, 9, 15), datetime.datetime(2021, 12, 15), 99.4428411),
-    (datetime.datetime(2021, 12, 15), datetime.datetime(2022, 3, 15), 99.40493593),
-    (datetime.datetime(2022, 3, 16), datetime.datetime(2022, 6, 16), 99.39725544),
-    (datetime.datetime(2022, 6, 15), datetime.datetime(2022, 9, 15), 99.3699872),
-    (datetime.datetime(2022, 9, 21), datetime.datetime(2022, 12, 21), 98.34777118),
-    (datetime.datetime(2022, 12, 21), datetime.datetime(2023, 3, 21), 98.30552388),
+    ("H20", 98.26531667),
+    ("M20", 98.31094247),
+    ("U20", 98.36682733),
+    ("Z20", 98.3829655),
+    ("H21", 98.44435054),
+    ("M21", 98.44597773),
+    ("U21", 98.4428411),
+    ("Z21", 98.40493593),
+    ("H22", 98.39725544),
+    ("M22", 98.3699872),
+    ("U22", 98.34777118),
+    ("Z22", 98.30552388),
 ]
 
 usdlibor_swap_instruments = [
@@ -208,8 +208,8 @@ for (length, length_type, rate) in usdlibor_cash_instruments:
     )
     usdlibor.add_instrument(inst)
 
-for (start_date, end_date, price) in usdlibor_futures_instruments:
-    inst = qb.FuturesInstrumentByDates(start_date, end_date, price, usdlibor)
+for (code, price) in usdlibor_futures_instruments:
+    inst = qb.FuturesInstrumentByIMMCode(code, price, usdlibor)
     usdlibor.add_instrument(inst)
 
 for (maturity, rate) in usdlibor_swap_instruments:
@@ -265,8 +265,8 @@ for (length, length_type, rate) in usdlibor_cash_instruments:
     )
     usdlibor_short.add_instrument(inst)
 
-for (start_date, end_date, price) in usdlibor_futures_instruments:
-    inst = qb.FuturesInstrumentByDates(start_date, end_date, price, usdlibor_short)
+for (code, price) in usdlibor_futures_instruments:
+    inst = qb.FuturesInstrumentByIMMCode(code, price, usdlibor_short)
     usdlibor_short.add_instrument(inst)
 
 for (maturity, rate) in usdlibor_swap_instruments[:2]:

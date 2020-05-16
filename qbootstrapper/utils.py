@@ -38,7 +38,7 @@ def imm_date(imm_code):
         "Z": 12,
     }
 
-    third = datetime.date(year, codes[letter], 15)
+    third = datetime.datetime(year, codes[letter], 15)
     if third.weekday() == 2:
         return third
     else:
