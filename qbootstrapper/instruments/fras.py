@@ -17,6 +17,7 @@ import sys
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
+from qbootstrapper.utils import Calendar
 
 if sys.version_info > (3,):
     long = int
@@ -44,14 +45,17 @@ class FRAInstrumentByDates(Instrument):
         ------
         basis (str)             : Accrual basis for the period
                                   [default: Act360]
-
-    TODO: Add FRAInstrumentByTenor
+        calendar (Calendar)     : Calendar used for payment date adjustment
+                                  [default: weekends]
+        convention (str)        : Payment date adjustment convention
+                                  [default: following]
     """
 
-    def __init__(self, effective, maturity, rate, curve, basis="Act360"):
+    def __init__(self, effective, maturity, rate, curve, basis="Act360", calendar=Calendar("weekends"), convention="following"):
         # assignments
         self.effective = effective
         self.maturity = maturity
+        self.payment = calendar.adjust(maturity, convention)
         self.rate = rate
         self.basis = basis
         self.curve = curve
@@ -82,7 +86,7 @@ class FRAInstrumentByDateAndTenor(Instrument):
 
     Arguments:
         effective (datetime)    : First day of the accrual period of the FRA
-        tenor (datetime)     : Last day of the accrual period of the FRA
+        tenor (Tenor)           : Tenor of the FRA
         rate (float)            : Fixing rate of the FRA
         curve (Curve)           : Curve being built, necessary for callbacks
                                   to the curve for discount factors
@@ -91,23 +95,22 @@ class FRAInstrumentByDateAndTenor(Instrument):
         ------
         basis (str)             : Accrual basis for the period
                                   [default: Act360]
-
-    TODO: Add FRAInstrumentByTenor
+        calendar (Calendar)     : Calendar used for payment date adjustment
+                                  [default: weekends]
+        convention (str)        : Payment date adjustment convention
+                                  [default: following]
     """
 
-    def __init__(self, effective, tenor, rate, curve, basis="act360"):
+    def __init__(self, effective, tenor, rate, curve, basis="act360", calendar=Calendar("weekends"), convention="following"):
         # assignments
         self.effective = effective
+        self.maturity = effective + tenor
+        self.payment = calendar.adjust(maturity, convention)
         self.tenor = tenor
         self.rate = rate
         self.basis = basis
         self.curve = curve
 
-        length_num = re.findall("\d+", self.tenor)[0]
-        length_type = re.findall("[A-Za-z]")[0]
-        self.maturity = effective + super(FRAInstrumentByDateAndTenor, self)._timedelta(
-            length_num, length_type
-        )
         self.accrual_period = super(FRAInstrumentByDateAndTenor, self).daycount(
             self.effective, self.maturity, self.basis
         )

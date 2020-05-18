@@ -25,8 +25,8 @@ fedfunds_short_conventions = {
 }
 
 fedfunds_conventions = {
-    "fixed_length": 6,
-    "float_length": 3,
+    "fixed_tenor": qb.Tenor("6M"),
+    "float_tenor": qb.Tenor("3M"),
     "fixed_basis": "Act360",
     "float_basis": "Act360",
     "fixed_period_adjustment": "following",
@@ -36,24 +36,22 @@ fedfunds_conventions = {
 }
 
 usdlibor_conventions = {
-    "fixed_length": 6,
-    "float_length": 3,
+    "fixed_tenor": qb.Tenor("6M"),
+    "float_tenor": qb.Tenor("3M"),
     "fixed_basis": "30360",
     "float_basis": "Act360",
     "fixed_period_adjustment": "following",
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
-    "rate_period": 3,
-    "rate_period_length": "months",
+    "rate_tenor": qb.Tenor("3M"),
 }
 
 fedfunds_cash = qb.instruments.LIBORInstrument(
     curve_effective,
     0.0155,
-    2,
+    qb.Tenor("2D"),
     fedfunds,
-    length_type="days",
     payment_adjustment="following",
 )
 
@@ -62,10 +60,8 @@ fedfunds_swap_onew = qb.OISSwapInstrument(
     datetime.datetime(2020, 7, 14),
     0.0155,
     fedfunds,
-    fixed_length=1,
-    float_length=1,
-    fixed_period_length="weeks",
-    float_period_length="weeks",
+    fixed_tenor=qb.Tenor("1W"),
+    float_tenor=qb.Tenor("1W"),
     **fedfunds_short_conventions
 )
 
@@ -74,10 +70,8 @@ fedfunds_swap_twow = qb.OISSwapInstrument(
     datetime.datetime(2020, 1, 22),
     0.0155,
     fedfunds,
-    fixed_length=2,
-    float_length=2,
-    fixed_period_length="weeks",
-    float_period_length="weeks",
+    fixed_tenor=qb.Tenor("2W"),
+    float_tenor=qb.Tenor("2W"),
     **fedfunds_short_conventions
 )
 
@@ -86,10 +80,8 @@ fedfunds_swap_threew = qb.OISSwapInstrument(
     datetime.datetime(2020, 1, 28),
     0.01551,
     fedfunds,
-    fixed_length=3,
-    float_length=3,
-    fixed_period_length="weeks",
-    float_period_length="weeks",
+    fixed_tenor=qb.Tenor("3W"),
+    float_tenor=qb.Tenor("3W"),
     **fedfunds_short_conventions
 )
 
@@ -124,7 +116,7 @@ fedfunds_long_swaps = [
     (datetime.datetime(2070, 1, 5), 0.01787),
 ]
 
-usdlibor_cash_instruments = [(3, "months", 0.0190838)]
+usdlibor_cash_instruments = [(qb.Tenor("3M"), 0.0190838)]
 
 usdlibor_futures_instruments = [
     ("H20", 98.26531667),
@@ -182,8 +174,8 @@ for (maturity, rate, months) in fedfunds_short_swaps:
         maturity,
         rate,
         fedfunds,
-        fixed_length=months,
-        float_length=months,
+        fixed_tenor=qb.Tenor("{months}M".format(**locals())),
+        float_tenor=qb.Tenor("{months}M".format(**locals())),
         **fedfunds_short_conventions
     )
     fedfunds.add_instrument(inst)
@@ -197,13 +189,12 @@ for (maturity, rate) in fedfunds_long_swaps:
 
 # USD LIBOR build
 
-for (length, length_type, rate) in usdlibor_cash_instruments:
+for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
         effective,
         rate,
-        length,
+        tenor,
         usdlibor,
-        length_type=length_type,
         payment_adjustment="following",
     )
     usdlibor.add_instrument(inst)
@@ -240,8 +231,8 @@ for (maturity, rate, months) in fedfunds_short_swaps:
         maturity,
         rate,
         fedfunds_short,
-        fixed_length=months,
-        float_length=months,
+        fixed_tenor=qb.Tenor("{months}M".format(**locals())),
+        float_tenor=qb.Tenor("{months}M".format(**locals())),
         **fedfunds_short_conventions
     )
     fedfunds_short.add_instrument(inst)
@@ -254,13 +245,12 @@ for (maturity, rate) in fedfunds_long_swaps[:6]:
 
 # Short USD LIBOR curve
 usdlibor_short = qb.LIBORCurve(curve_effective, discount_curve=fedfunds_short)
-for (length, length_type, rate) in usdlibor_cash_instruments:
+for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
         effective,
         rate,
-        length,
+        tenor,
         usdlibor_short,
-        length_type=length_type,
         payment_adjustment="following",
     )
     usdlibor_short.add_instrument(inst)

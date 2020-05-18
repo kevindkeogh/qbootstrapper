@@ -22,6 +22,7 @@ import time
 # qlib libraries
 from qbootstrapper.instruments import Instrument
 from qbootstrapper.swapscheduler import Schedule
+from qbootstrapper.utils import Calendar, Tenor
 
 if sys.version_info > (3,):
     long = int
@@ -40,20 +41,18 @@ class SwapInstrument(Instrument):
         curve,
         fixed_basis="30360",
         float_basis="act360",
-        fixed_length=6,
-        float_length=6,
-        fixed_period_length="months",
-        float_period_length="months",
+        fixed_tenor=Tenor("6M"),
+        float_tenor=Tenor("6M"),
         fixed_period_adjustment="unadjusted",
         float_period_adjustment="unadjusted",
         fixed_payment_adjustment="unadjusted",
         float_payment_adjustment="unadjusted",
+        calendar=Calendar("weekends"),
         second=False,
         penultimate=False,
-        fixing_lag=0,
+        fixing_lag=Tenor("0D"),
         notional=100,
-        rate_period=1,
-        rate_period_length="days",
+        rate_tenor=Tenor("ON"),
         rate_basis="act360",
     ):
 
@@ -65,24 +64,22 @@ class SwapInstrument(Instrument):
         if bool(penultimate):
             self.penultimate = penultimate
         self.rate = rate
+        self.calendar = calendar
         self.curve = curve
         self.fixing_lag = fixing_lag
         self.notional = notional
 
         self.fixed_basis = fixed_basis
-        self.fixed_length = fixed_length
-        self.fixed_period_length = fixed_period_length
+        self.fixed_tenor = fixed_tenor
         self.fixed_period_adjustment = fixed_period_adjustment
         self.fixed_payment_adjustment = fixed_payment_adjustment
 
         self.float_basis = float_basis
-        self.float_length = float_length
-        self.float_period_length = float_period_length
+        self.float_tenor = float_tenor
         self.float_period_adjustment = float_period_adjustment
         self.float_payment_adjustment = float_payment_adjustment
 
-        self.rate_period = rate_period
-        self.rate_period_length = rate_period_length
+        self.rate_tenor = rate_tenor
         self.rate_basis = rate_basis
 
         self._set_schedules()
@@ -94,39 +91,43 @@ class SwapInstrument(Instrument):
             self.fixed_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.fixed_length,
-                period_length=self.fixed_period_length,
+                self.fixed_tenor,
                 second=self.second,
                 penultimate=self.penultimate,
                 period_adjustment=self.fixed_period_adjustment,
                 payment_adjustment=self.fixed_payment_adjustment,
+                fixing_lag=self.fixing_lag,
+                calendar=self.calendar,
             )
             self.float_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.float_length,
-                period_length=self.float_period_length,
+                self.float_tenor,
                 second=self.second,
                 penultimate=self.penultimate,
                 period_adjustment=self.float_period_adjustment,
                 payment_adjustment=self.float_payment_adjustment,
+                fixing_lag=self.fixing_lag,
+                calendar=self.calendar,
             )
         else:
             self.fixed_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.fixed_length,
-                period_length=self.fixed_period_length,
+                self.fixed_tenor,
                 period_adjustment=self.fixed_period_adjustment,
                 payment_adjustment=self.fixed_payment_adjustment,
+                fixing_lag=self.fixing_lag,
+                calendar=self.calendar,
             )
             self.float_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.float_length,
-                period_length=self.float_period_length,
+                self.float_tenor,
                 period_adjustment=self.float_period_adjustment,
                 payment_adjustment=self.float_payment_adjustment,
+                fixing_lag=self.fixing_lag,
+                calendar=self.calendar,
             )
 
 
@@ -161,28 +162,12 @@ class OISSwapInstrument(SwapInstrument):
                                               base Instrument class for
                                               implemented conventions
                                               [default: 'Act360']
-        fixed_length (int)                  : Length of the fixed accrual
-                                              period, must be combined with the
-                                              'fixed_period_length' argument
-                                              [default: 6]
-        float_length (int)                  : Length of the floating accrual
-                                              period, must be combined with
-                                              the 'float_period_length'
-                                              argument. Should usually match the
-                                              rate_period argument
-                                              [default: 6]
-        fixed_period_length (string)        : Length of the fixed accrual
-                                              period timescale. See the
-                                              _timedelta method of the base
-                                              Instrument class for implemented
-                                              conventions
-                                              [default: 'months']
-        float_period_length (string)        : Length of the floating accrual
-                                              period timescale. See the
-                                              _timedelta method of the base
-                                              Instrument class for implemented
-                                              conventions
-                                              [default: 'months']
+        fixed_tenor (Tenor)                 : Length of the fixed accrual
+                                              period
+                                              [default: 6M]
+        float_tenor (Tenor)                 : Length of the floating accrual
+                                              period
+                                              [default: 6M]
         fixed_period_adjustment (string)    : Adjustment type for fixed
                                               accrual periods. See the
                                               _date_adjust method of the base
@@ -222,17 +207,9 @@ class OISSwapInstrument(SwapInstrument):
                                               Larger numbers will be slower,
                                               but more exact.
                                               [default: 100]
-        rate_period (int)                   : Length of the floating rate
-                                              accrual period, must be combined
-                                              with the 'rate_period_length'
-                                              argument. Should usually match
-                                              the float_length argument.
-                                              [default: 1]
-        rate_period_length (string)         : Length of the rate accrual period
-                                              timescale. See the _timedelta
-                                              method of the base Instrument
-                                              class for implemented convetions
-                                              [default: 'days']
+        rate_tenor (Tenor)                  : Length of the floating rate
+                                              accrual period
+                                              [default: ON]
         rate_basis (string)                 : Accrual basis of the LIBOR rate.
                                               See the daycount method of the
                                               base Instrument class for
@@ -391,28 +368,12 @@ class LIBORSwapInstrument(SwapInstrument):
                                               base Instrument class for
                                               implemented conventions
                                               [default: 'Act360']
-        fixed_length (int)                  : Length of the fixed accrual
-                                              period, must be combined with the
-                                              'fixed_period_length' argument
-                                              [default: 6]
-        float_length (int)                  : Length of the floating accrual
-                                              period, must be combined with
-                                              the 'float_period_length'
-                                              argument. Should usually match the
-                                              rate_period argument
-                                              [default: 6]
-        fixed_period_length (string)        : Length of the fixed accrual
-                                              period timescale. See the
-                                              _timedelta method of the base
-                                              Instrument class for implemented
-                                              conventions
-                                              [default: 'months']
-        float_period_length (string)        : Length of the floating accrual
-                                              period timescale. See the
-                                              _timedelta method of the base
-                                              Instrument class for implemented
-                                              conventions
-                                              [default: 'months']
+        fixed_tenor (Tenor)                 : Length of the fixed accrual
+                                              period
+                                              [default: 6M]
+        float_tenor (Tenor)                 : Length of the floating accrual
+                                              period
+                                              [default: 6M]
         fixed_period_adjustment (string)    : Adjustment type for fixed
                                               accrual periods. See the
                                               _date_adjust method of the base
@@ -452,17 +413,9 @@ class LIBORSwapInstrument(SwapInstrument):
                                               Larger numbers will be slower,
                                               but more exact.
                                               [default: 100]
-        rate_period (int)                   : Length of the floating rate
-                                              accrual period, must be combined
-                                              with the 'rate_period_length'
-                                              argument. Should usually match
-                                              the float_length argument.
-                                              [default: 1]
-        rate_period_length (string)         : Length of the rate accrual period
-                                              timescale. See the _timedelta
-                                              method of the base Instrument
-                                              class for implemented convetions
-                                              [default: 'days']
+        rate_tenor (Tenor)                  : Length of the floating rate
+                                              accrual period
+                                              [default: ON]
         rate_basis (string)                 : Accrual basis of the LIBOR rate.
                                               See the daycount method of the
                                               base Instrument class for
@@ -493,7 +446,7 @@ class LIBORSwapInstrument(SwapInstrument):
 
                      DF[Fixing_date]              [rate_days/year]
                [ ------------------------ - 1 ] * ----------------
-                 DF[Fixing + rate_period]          [rate_length]
+                    DF[Fixing + tenor]              [rate_tenor]
 
         Arguments:
             guess (float)   :   guess to be appended to a copy of the attached
@@ -532,14 +485,12 @@ class LIBORSwapInstrument(SwapInstrument):
         # and calls to the interpolator objects
         fixing_dates = self.float_schedule.periods["fixing_date"].astype("<M8[s]")
 
-        rate_length = self._timedelta(self.rate_period, self.rate_period_length)
-
         end_dates = np.empty_like(fixing_dates, dtype=np.uint64)
         accrual_periods = np.empty_like(fixing_dates, dtype=np.float64)
         rate_accrual_periods = np.empty_like(fixing_dates, dtype=np.float64)
 
         for idx, date in enumerate(self.float_schedule.periods["fixing_date"]):
-            end_date = date.astype(object) + rate_length
+            end_date = date.astype(object) + self.rate_tenor
             end_date = np.datetime64(end_date.isoformat())
             end_dates[idx] = end_date.astype("<M8[s]").astype(np.uint64)
             rate_accrual_periods[idx] = super(LIBORSwapInstrument, self).daycount(
@@ -603,10 +554,8 @@ class BasisSwapInstrument(SwapInstrument):
         leg_two_spread=0,
         leg_one_basis="Act360",
         leg_two_basis="Act360",
-        leg_one_length=3,
-        leg_one_period_length="months",
-        leg_two_length=3,
-        leg_two_period_length="months",
+        leg_one_tenor=Tenor("3M"),
+        leg_two_tenor=Tenor("3M"),
         leg_one_period_adjustment="unadjusted",
         leg_two_period_adjustment="unadjusted",
         leg_one_payment_adjustment="unadjusted",
@@ -614,13 +563,11 @@ class BasisSwapInstrument(SwapInstrument):
         second=False,
         penultimate=False,
         notional=100,
-        leg_one_fixing_lag=0,
-        leg_two_fixing_lag=0,
-        leg_one_rate_period=1,
-        leg_one_rate_period_length="days",
+        leg_one_fixing_lag=Tenor("0D"),
+        leg_two_fixing_lag=Tenor("0D"),
+        leg_one_rate_tenor=Tenor("ON"),
         leg_one_rate_basis="Act360",
-        leg_two_rate_period=3,
-        leg_two_rate_period_length="months",
+        leg_two_rate_tenor=Tenor("3M"),
         leg_two_rate_basis="Act360",
     ):
 
@@ -639,25 +586,21 @@ class BasisSwapInstrument(SwapInstrument):
         self.curve = curve
 
         self.leg_one_basis = leg_one_basis
-        self.leg_one_length = leg_one_length
-        self.leg_one_period_length = leg_one_period_length
+        self.leg_one_tenor = leg_one_tenor
         self.leg_one_period_adjustment = leg_one_period_adjustment
         self.leg_one_payment_adjustment = leg_one_payment_adjustment
 
         self.leg_two_basis = leg_two_basis
-        self.leg_two_length = leg_two_length
-        self.leg_two_period_length = leg_two_period_length
+        self.leg_two_tenor = leg_two_tenor
         self.leg_two_period_adjustment = leg_two_period_adjustment
         self.leg_two_payment_adjustment = leg_two_payment_adjustment
 
         self.leg_one_fixing_lag = leg_one_fixing_lag
-        self.leg_one_rate_period = leg_one_rate_period
-        self.leg_one_rate_period_length = leg_one_rate_period_length
+        self.leg_one_rate_tenor = leg_one_rate_tenor
         self.leg_one_rate_basis = leg_one_rate_basis
 
         self.leg_two_fixing_lag = leg_two_fixing_lag
-        self.leg_two_rate_period = leg_two_rate_period
-        self.leg_two_rate_period_length = leg_two_rate_period_length
+        self.leg_two_rate_tenor = leg_two_rate_tenor
         self.leg_two_rate_basis = leg_two_rate_basis
 
         self._set_schedules()
@@ -669,18 +612,17 @@ class BasisSwapInstrument(SwapInstrument):
             self.leg_one_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.leg_one_length,
-                period_length=self.leg_one_period_length,
+                self.leg_one_tenor,
                 second=self.second,
                 penultimate=self.penultimate,
                 period_adjustment=self.leg_one_period_adjustment,
                 payment_adjustment=self.leg_one_payment_adjustment,
+                fixing_lag=self.leg_one_fixing_lag,
             )
             self.leg_two_shcedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.leg_two_length,
-                period_length=self.leg_two_period_length,
+                self.leg_two_tenor,
                 second=self.second,
                 penultimate=self.penultimate,
                 period_adjustment=self.leg_two_period_adjustment,
@@ -690,16 +632,14 @@ class BasisSwapInstrument(SwapInstrument):
             self.leg_one_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.leg_one_length,
-                period_length=self.leg_one_period_length,
+                self.leg_one_tenor,
                 period_adjustment=self.leg_one_period_adjustment,
                 payment_adjustment=self.leg_one_payment_adjustment,
             )
             self.leg_two_schedule = Schedule(
                 self.effective,
                 self.maturity,
-                self.leg_two_length,
-                period_length=self.leg_two_period_length,
+                self.leg_two_tenor,
                 period_adjustment=self.leg_two_period_adjustment,
                 payment_adjustment=self.leg_two_payment_adjustment,
             )
@@ -725,10 +665,10 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
 
     def _swap_value(self, guesses):
         """
-        Note that this approach should only be used for a 
+        Note that this approach should only be used for a
         SimultaneousStrippedCurve
 
-        TODO: Seperate cases for when self.curve.curve_type == 
+        TODO: Seperate cases for when self.curve.curve_type ==
         'Simultaneous_curve' and when not
         """
         ois_guess = guesses[0]
@@ -795,16 +735,12 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         # and calls to the interpolator objects
         fixing_dates = self.leg_two_schedule.periods["fixing_date"].astype("<M8[s]")
 
-        rate_length = self._timedelta(
-            self.leg_two_rate_period, self.leg_two_rate_period_length
-        )
-
         end_dates = np.empty_like(fixing_dates, dtype=np.uint64)
         accrual_periods = np.empty_like(fixing_dates, dtype=np.float64)
         rate_accrual_periods = np.empty_like(fixing_dates, dtype=np.float64)
 
         for idx, date in enumerate(self.leg_two_schedule.periods["fixing_date"]):
-            end_date = date.astype(object) + rate_length
+            end_date = date.astype(object) + self.leg_two_rate_tenor
             end_date = np.datetime64(end_date.isoformat())
             end_dates[idx] = end_date.astype("<M8[s]").astype(np.uint64)
             rate_accrual_periods[idx] = super(

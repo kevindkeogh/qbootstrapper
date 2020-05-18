@@ -16,7 +16,7 @@ import sys
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
-from qbootstrapper.utils import imm_date
+from qbootstrapper.utils import imm_date, Tenor
 
 if sys.version_info > (3,):
     long = int
@@ -104,7 +104,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, code, price, curve, basis="act360"):
+    def __init__(self, code, price, curve, basis="act360", tenor=Tenor("3M")):
         # assignments
         self.code = code
         self.price = price
@@ -113,7 +113,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.curve = curve
 
         self.effective = imm_date(code)
-        self.maturity = self.effective + super(FuturesInstrumentByIMMCode, self)._timedelta(3, "M")
+        self.maturity = self.effective + tenor
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )
