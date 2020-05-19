@@ -14,6 +14,8 @@ from __future__ import division
 import datetime
 import dateutil
 import re
+import os
+import pkg_resources
 import sys
 
 
@@ -78,10 +80,15 @@ class Calendar(object):
         self.weekends = weekends
 
         for idx, arg in enumerate(args):
+            if arg.lower() == "weekends":
+                continue
+
             if idx == 0:
                 self.name = str(arg)
             else:
                 self.name += " " + str(arg)
+
+
             self._read_file(arg)
 
     def _read_file(self, cal):
@@ -89,7 +96,7 @@ class Calendar(object):
             filename = os.path.join("calendars", cal.upper() + ".txt")
             filepath = pkg_resources.resource_filename(__name__, filename)
         except Exception as e:
-            return ValueError(f"Could not find calendar {cal} in sources")
+            return ValueError(f"Could not find calendar {cal} in sources: {e}")
 
         with open(filepath) as fh:
             for row in fh:

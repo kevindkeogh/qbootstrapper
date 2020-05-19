@@ -37,7 +37,7 @@ class LIBORInstrument(Instrument):
         effective (datetime)    : Effective date of the LIBOR-equivalent
                                   cash instrument
         rate (float)            : Interest rate of the instrument
-        term_length (int)       : Length of the instrument period
+        tenor (Tenor)           : Tenor of the instrument
         curve (Curve)           : Curve being built, necessary for callbacks
                                   to the curve for discount factors
 
@@ -62,7 +62,7 @@ class LIBORInstrument(Instrument):
         basis="act360",
         length_type="months",
         payment_adjustment="unadjusted",
-        calendar=Calendar("weekends"),
+        calendar=None,
     ):
         # assignments
         self.effective = effective
@@ -70,7 +70,7 @@ class LIBORInstrument(Instrument):
         self.tenor = tenor
         self.basis = basis
         self.payment_adjustment = payment_adjustment
-        self.calendar = calendar
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.instrument_type = "cash"
 
         # calculations

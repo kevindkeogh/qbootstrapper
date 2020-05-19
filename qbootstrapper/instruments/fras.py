@@ -12,7 +12,6 @@ discount factors for swaps are calculated using a root-finding algorithm.
 # python libraries
 from __future__ import division
 import numpy as np
-import re
 import sys
 
 # qlib libraries
@@ -51,18 +50,29 @@ class FRAInstrumentByDates(Instrument):
                                   [default: following]
     """
 
-    def __init__(self, effective, maturity, rate, curve, basis="Act360", calendar=Calendar("weekends"), convention="following"):
+    def __init__(
+        self,
+        effective,
+        maturity,
+        rate,
+        curve,
+        basis="act360",
+        calendar=None,
+        convention="following",
+    ):
         # assignments
         self.effective = effective
         self.maturity = maturity
-        self.payment = calendar.adjust(maturity, convention)
         self.rate = rate
         self.basis = basis
         self.curve = curve
         self.accrual_period = super(FRAInstrumentByDates, self).daycount(
             self.effective, self.maturity, self.basis
         )
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.instrument_type = "FRA"
+
+        self.payment = calendar.adjust(maturity, convention)
 
     def discount_factor(self):
         """Method for returning the discount factor for a FRA
@@ -101,15 +111,25 @@ class FRAInstrumentByDateAndTenor(Instrument):
                                   [default: following]
     """
 
-    def __init__(self, effective, tenor, rate, curve, basis="act360", calendar=Calendar("weekends"), convention="following"):
+    def __init__(
+        self,
+        effective,
+        tenor,
+        rate,
+        curve,
+        basis="act360",
+        calendar=Calendar("weekends"),
+        convention="following",
+    ):
         # assignments
         self.effective = effective
         self.maturity = effective + tenor
-        self.payment = calendar.adjust(maturity, convention)
+        self.payment = calendar.adjust(self.maturity, convention)
         self.tenor = tenor
         self.rate = rate
         self.basis = basis
         self.curve = curve
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
 
         self.accrual_period = super(FRAInstrumentByDateAndTenor, self).daycount(
             self.effective, self.maturity, self.basis

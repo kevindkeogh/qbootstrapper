@@ -7,7 +7,6 @@ Implements the Schedule object that creates a NumPy rec.array of
 accrual, fixing, and payments dates for an interest rate swap.
 """
 
-import dateutil.relativedelta
 import numpy as np
 
 from qbootstrapper.utils import Calendar, Tenor
@@ -68,8 +67,8 @@ class Schedule:
         penultimate=False,
         period_adjustment="unadjusted",
         payment_adjustment="unadjusted",
-        fixing_lag=Tenor("-2D"),
-        calendar=Calendar("weekends"),
+        fixing_lag=None,
+        calendar=None,
     ):
 
         # variable assignment
@@ -80,8 +79,8 @@ class Schedule:
         self.payment_adjustment = payment_adjustment
         self.second = second
         self.penultimate = penultimate
-        self.fixing_lag = fixing_lag
-        self.calendar = calendar
+        self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("1D")
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
 
         # date generation routine
         self._gen_periods()
@@ -153,7 +152,6 @@ class Schedule:
         """
         dates = []
         current = maturity
-        counter = 0
         while current > effective:
             dates.append(self.calendar.adjust(current, adjustment))
             current = self.calendar.reverse(current, tenor, "unadjusted")

@@ -48,11 +48,7 @@ usdlibor_conventions = {
 }
 
 fedfunds_cash = qb.instruments.LIBORInstrument(
-    curve_effective,
-    0.0155,
-    qb.Tenor("2D"),
-    fedfunds,
-    payment_adjustment="following",
+    curve_effective, 0.0155, qb.Tenor("2D"), fedfunds, payment_adjustment="following",
 )
 
 fedfunds_swap_onew = qb.OISSwapInstrument(
@@ -191,11 +187,7 @@ for (maturity, rate) in fedfunds_long_swaps:
 
 for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
-        effective,
-        rate,
-        tenor,
-        usdlibor,
-        payment_adjustment="following",
+        effective, rate, tenor, usdlibor, payment_adjustment="following",
     )
     usdlibor.add_instrument(inst)
 
@@ -247,11 +239,7 @@ for (maturity, rate) in fedfunds_long_swaps[:6]:
 usdlibor_short = qb.LIBORCurve(curve_effective, discount_curve=fedfunds_short)
 for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
-        effective,
-        rate,
-        tenor,
-        usdlibor_short,
-        payment_adjustment="following",
+        effective, rate, tenor, usdlibor_short, payment_adjustment="following",
     )
     usdlibor_short.add_instrument(inst)
 
