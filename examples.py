@@ -333,7 +333,7 @@ def load_curve(filename):
 
 
 def as_percent(num):
-    return "{0:.5f}".format(num * 100)
+    return "{0:.5f}%".format(num * 100)
 
 
 def compare_curves(dvc_curve, qb_curve):
@@ -352,11 +352,11 @@ def compare_curves(dvc_curve, qb_curve):
                 maturity,
                 as_percent(dvc_zr),
                 as_percent(qb_zeros[i]),
-                "{0:.4f}".format(((dvc_zr - qb_zeros[i]) * 10000.0)),
+                "{:.4f}".format(((dvc_zr - qb_zeros[i]) * 10000.0)),
             ]
         )
 
-    print(tabulate.tabulate(records, headers=["Date", "DVC ZR", "QB ZR", "Difference"]))
+    print(tabulate.tabulate(records, headers=["Date", "DVC ZR", "QB ZR", "Difference (bps)"], floatfmt=".4f"))
 
 
 def main():
