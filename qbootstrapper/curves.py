@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # vim: set fileencoding=utf-8
 """
-Copyright (c) Kevin Keogh 2016
+Copyright (c) Kevin Keogh 2016-2020
 
 Implements the Curve ojects that can be used to hold discount factor
 curves and implement the build method for bootstrapping.

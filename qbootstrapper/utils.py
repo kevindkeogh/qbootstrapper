@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8
 """
-Copyright (c) Kevin Keogh 2016
+Copyright (c) Kevin Keogh 2016-2020
 
 Implements the Instruments ojects that are used by the Curve objects to hold
 attributes of market data and return discount factors.
