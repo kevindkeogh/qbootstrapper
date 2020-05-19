@@ -356,7 +356,13 @@ def compare_curves(dvc_curve, qb_curve):
             ]
         )
 
-    print(tabulate.tabulate(records, headers=["Date", "DVC ZR", "QB ZR", "Difference (bps)"], floatfmt=".4f"))
+    print(
+        tabulate.tabulate(
+            records,
+            headers=["Date", "DVC ZR", "QB ZR", "Difference (bps)"],
+            floatfmt=".4f",
+        )
+    )
 
 
 def main():
