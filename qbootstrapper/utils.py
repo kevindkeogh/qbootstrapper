@@ -98,9 +98,9 @@ class Calendar(object):
         except Exception as e:
             return ValueError(f"Could not find calendar {cal} in sources: {e}")
 
-        with open(filepath) as fh:
+        with open(filepath, "r") as fh:
             for row in fh:
-                dt = datetime.datetime.strftime("%Y-%m-%d")
+                dt = datetime.datetime.strptime(row.strip(), "%Y-%m-%d")
                 self.holidays.add(dt)
 
     def advance(self, now, tenor, convention="following"):

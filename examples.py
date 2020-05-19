@@ -22,6 +22,7 @@ fedfunds_short_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
+    "calendar": qb.Calendar("FRB")
 }
 
 fedfunds_conventions = {
@@ -33,6 +34,7 @@ fedfunds_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
+    "calendar": qb.Calendar("FRB")
 }
 
 usdlibor_conventions = {
@@ -45,6 +47,7 @@ usdlibor_conventions = {
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
     "rate_tenor": qb.Tenor("3M"),
+    "calendar": qb.Calendar("NEWYORK")
 }
 
 fedfunds_cash = qb.instruments.LIBORInstrument(
