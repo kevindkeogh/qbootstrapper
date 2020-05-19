@@ -47,13 +47,13 @@ class FuturesInstrumentByDates(Instrument):
         kwargs
         ------
         basis (str)             : Accrual basis for the period
-                                  [default: Act360]
+                                  [default: act360]
 
     TODO: Add FuturesInstrumentByTicker
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, effective, maturity, price, curve, basis="Act360"):
+    def __init__(self, effective, maturity, price, curve, basis="act360"):
         # assignments
         self.effective = effective
         self.maturity = maturity
@@ -99,7 +99,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         kwargs
         ------
         basis (str)             : Accrual basis for the period
-                                  [default: Act360]
+                                  [default: act360]
 
     TODO: Add Futures convexity calculation
     """

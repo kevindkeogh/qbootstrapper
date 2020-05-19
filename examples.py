@@ -52,7 +52,7 @@ usdlibor_conventions = {
     "fixed_tenor": qb.Tenor("6M"),
     "float_tenor": qb.Tenor("3M"),
     "fixed_basis": "30360",
-    "float_basis": "Act360",
+    "float_basis": "act360",
     "fixed_period_adjustment": "following",
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
@@ -207,7 +207,12 @@ for (tenor, rate) in fedfunds_long_swaps:
 # USD LIBOR build
 for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
-        effective, rate, tenor, usdlibor, payment_adjustment="following", fixing_lag=qb.Tenor("2D")
+        effective,
+        rate,
+        tenor,
+        usdlibor,
+        payment_adjustment="following",
+        fixing_lag=qb.Tenor("2D"),
     )
     usdlibor.add_instrument(inst)
 
@@ -315,7 +320,6 @@ def load_curve(filename):
                 )
             except:
                 pass
-
 
     return scipy.interpolate.PchipInterpolator(np.array(dates), np.array(dfs))
 

@@ -98,8 +98,8 @@ class Instrument(object):
             effective (datetime)    : First day of the accrual period
             maturity (datetime)     : Last day of the accrual period
             basis (str)             : Basis convention
-                                      available: Act360,
-                                                 Act365,
+                                      available: act360,
+                                                 act365,
                                                  30360,
                                                  30E360
 

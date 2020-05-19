@@ -44,7 +44,7 @@ class LIBORInstrument(Instrument):
         kwargs
         ------
         basis (str)             : Accrual basis for the period
-                                  [default: Act360]
+                                  [default: act360]
         length_type             : Length of the term_length in units
                                   [default: months]
         payment_adjustment (str): Adjustment to the payment date from the

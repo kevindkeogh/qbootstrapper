@@ -55,7 +55,7 @@ class OISSwapInstrument(SwapInstrument):
                                               leg. See daycount method of
                                               base Instrument class for
                                               implemented conventions
-                                              [default: 'Act360']
+                                              [default: 'act360']
         fixed_tenor (Tenor)                 : Length of the fixed accrual
                                               period
                                               [default: 6M]
@@ -108,7 +108,7 @@ class OISSwapInstrument(SwapInstrument):
                                               See the daycount method of the
                                               base Instrument class for
                                               implemented conventions.
-                                              [default: 'Act360']
+                                              [default: 'act360']
     """
 
     def __init__(self, *args, **kwargs):
@@ -228,7 +228,9 @@ class OISSwapInstrument(SwapInstrument):
         start_day = start_date.astype(object).weekday()
         first_dates = np.arange(start_date, end_date, one_day)
         # Remove all Saturdays and Sundays
-        first_dates = first_dates[((first_dates.astype("datetime64[D]").view("int64") - 4) % 7) < 5]
+        first_dates = first_dates[
+            ((first_dates.astype("datetime64[D]").view("int64") - 4) % 7) < 5
+        ]
         second_dates = np.roll(first_dates, -1)
         second_dates[-1] = period["accrual_end"]
 

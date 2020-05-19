@@ -54,7 +54,7 @@ class LIBORSwapInstrument(SwapInstrument):
                                               leg. See daycount method of
                                               base Instrument class for
                                               implemented conventions
-                                              [default: 'Act360']
+                                              [default: 'act360']
         fixed_tenor (Tenor)                 : Length of the fixed accrual
                                               period
                                               [default: 6M]
@@ -107,7 +107,7 @@ class LIBORSwapInstrument(SwapInstrument):
                                               See the daycount method of the
                                               base Instrument class for
                                               implemented conventions.
-                                              [default: 'Act360']
+                                              [default: 'act360']
     """
 
     def __init__(self, *args, **kwargs):

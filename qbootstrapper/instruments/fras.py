@@ -43,7 +43,7 @@ class FRAInstrumentByDates(Instrument):
         kwargs
         ------
         basis (str)             : Accrual basis for the period
-                                  [default: Act360]
+                                  [default: act360]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
         convention (str)        : Payment date adjustment convention
@@ -104,7 +104,7 @@ class FRAInstrumentByDateAndTenor(Instrument):
         kwargs
         ------
         basis (str)             : Accrual basis for the period
-                                  [default: Act360]
+                                  [default: act360]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
         convention (str)        : Payment date adjustment convention

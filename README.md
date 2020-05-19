@@ -12,8 +12,8 @@ A complete demonstration of the construction of USD, EUR, and GBP OIS and LIBOR 
 >>> eonia = qb.Curve(curve_date)
 >>> eonia_conventions = {'fixed_length': 12,
                          'float_length': 12,
-                         'fixed_basis': 'Act360',
-                         'float_basis': 'Act360',
+                         'fixed_basis': 'act360',
+                         'float_basis': 'act360',
                          'fixed_period_adjustment': 'following',
                          'float_period_adjustment': 'following',
                          'fixed_payment_adjustment': 'following',
