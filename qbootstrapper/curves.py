@@ -97,11 +97,17 @@ class Curve(object):
         self.instruments.sort(key=operator.attrgetter("maturity"))
         for instrument in self.instruments:
             discount_factor = instrument.discount_factor()
+            if instrument.instrument_type in ["cash", "fra", "futures"]:
+                curve_date = instrument.maturity
+            else:
+                curve_date = instrument.fixed_schedule.periods[-1][
+                    "payment_date"
+                ].astype(object)
 
             array = np.array(
                 [
                     (
-                        np.datetime64(instrument.maturity.strftime("%Y-%m-%d")),
+                        np.datetime64(curve_date.strftime("%Y-%m-%d")),
                         time.mktime(instrument.maturity.timetuple()),
                         discount_factor,
                     )

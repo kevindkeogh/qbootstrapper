@@ -88,7 +88,6 @@ class Calendar(object):
             else:
                 self.name += " " + str(arg)
 
-
             self._read_file(arg)
 
     def _read_file(self, cal):

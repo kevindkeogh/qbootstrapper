@@ -11,6 +11,7 @@ discount factors for swaps are calculated using a root-finding algorithm.
 """
 # python libraries
 from __future__ import division
+import datetime
 import sys
 
 # qlib libraries
@@ -51,16 +52,26 @@ class SwapInstrument(Instrument):
     ):
 
         # assignments
-        self.effective = effective
-        self.maturity = maturity
+        self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("0D")
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+
+        self.effective = effective + self.fixing_lag
+        if type(maturity) is datetime.datetime:
+            self.maturity = maturity
+        elif type(maturity) is Tenor:
+            self.maturity = self.calendar.advance(
+                self.effective, maturity, "unadjusted"
+            )
+        else:
+            raise ValueError("Maturity must be of type datetime or Tenor")
+
         if bool(second):
             self.second = second
         if bool(penultimate):
             self.penultimate = penultimate
+
         self.rate = rate
-        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.curve = curve
-        self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("0D")
         self.notional = notional
 
         self.fixed_basis = fixed_basis

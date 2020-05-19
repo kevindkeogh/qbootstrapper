@@ -11,7 +11,7 @@ import copy
 import qbootstrapper as qb
 
 curve_effective = datetime.datetime(2019, 12, 31)
-effective = datetime.datetime(2019, 12, 31)
+effective = datetime.datetime(2020, 1, 2)
 
 # Curves
 fedfunds = qb.Curve(curve_effective)
@@ -22,7 +22,7 @@ fedfunds_short_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
-    "calendar": qb.Calendar("FRB")
+    "calendar": qb.Calendar("FRB"),
 }
 
 fedfunds_conventions = {
@@ -34,7 +34,7 @@ fedfunds_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
-    "calendar": qb.Calendar("FRB")
+    "calendar": qb.Calendar("FRB"),
 }
 
 usdlibor_conventions = {
@@ -47,16 +47,16 @@ usdlibor_conventions = {
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
     "rate_tenor": qb.Tenor("3M"),
-    "calendar": qb.Calendar("NEWYORK")
+    "calendar": qb.Calendar("NEWYORK"),
 }
 
 fedfunds_cash = qb.instruments.LIBORInstrument(
-    curve_effective, 0.0155, qb.Tenor("2D"), fedfunds, payment_adjustment="following",
+    curve_effective, 0.0155, qb.Tenor("ON"), fedfunds, payment_adjustment="following",
 )
 
 fedfunds_swap_onew = qb.OISSwapInstrument(
     effective,
-    datetime.datetime(2020, 7, 14),
+    qb.Tenor("1W"),
     0.0155,
     fedfunds,
     fixed_tenor=qb.Tenor("1W"),
@@ -66,7 +66,7 @@ fedfunds_swap_onew = qb.OISSwapInstrument(
 
 fedfunds_swap_twow = qb.OISSwapInstrument(
     effective,
-    datetime.datetime(2020, 1, 22),
+    qb.Tenor("2W"),
     0.0155,
     fedfunds,
     fixed_tenor=qb.Tenor("2W"),
@@ -76,7 +76,7 @@ fedfunds_swap_twow = qb.OISSwapInstrument(
 
 fedfunds_swap_threew = qb.OISSwapInstrument(
     effective,
-    datetime.datetime(2020, 1, 28),
+    qb.Tenor("3W"),
     0.01551,
     fedfunds,
     fixed_tenor=qb.Tenor("3W"),
@@ -85,34 +85,34 @@ fedfunds_swap_threew = qb.OISSwapInstrument(
 )
 
 fedfunds_short_swaps = [
-    (datetime.datetime(2020, 2, 5), 0.01553, 1),
-    (datetime.datetime(2020, 3, 5), 0.01559, 2),
-    (datetime.datetime(2020, 4, 7), 0.01561, 3),
-    (datetime.datetime(2020, 5, 6), 0.01559, 4),
-    (datetime.datetime(2020, 6, 5), 0.01556, 5),
-    (datetime.datetime(2020, 7, 7), 0.01553, 6),
-    (datetime.datetime(2020, 10, 7), 0.01537, 9),
+    (qb.Tenor("1M"), 0.01553, 1),
+    (qb.Tenor("2M"), 0.01559, 2),
+    (qb.Tenor("3M"), 0.01561, 3),
+    (qb.Tenor("4M"), 0.01559, 4),
+    (qb.Tenor("5M"), 0.01556, 5),
+    (qb.Tenor("6M"), 0.01553, 6),
+    (qb.Tenor("9M"), 0.01537, 9),
 ]
 
 fedfunds_long_swaps = [
-    (datetime.datetime(2021, 1, 5), 0.01516),
-    (datetime.datetime(2021, 7, 5), 0.01474),
-    (datetime.datetime(2022, 1, 5), 0.01453),
-    (datetime.datetime(2023, 1, 5), 0.01449),
-    (datetime.datetime(2024, 1, 5), 0.01466),
-    (datetime.datetime(2025, 1, 5), 0.01497),
-    (datetime.datetime(2026, 1, 5), 0.01532),
-    (datetime.datetime(2027, 1, 5), 0.01566),
-    (datetime.datetime(2028, 1, 5), 0.01602),
-    (datetime.datetime(2029, 1, 5), 0.01635),
-    (datetime.datetime(2030, 1, 5), 0.01666),
-    (datetime.datetime(2032, 1, 5), 0.01720),
-    (datetime.datetime(2035, 1, 5), 0.01777),
-    (datetime.datetime(2040, 1, 5), 0.01833),
-    (datetime.datetime(2045, 1, 5), 0.01854),
-    (datetime.datetime(2050, 1, 5), 0.01859),
-    (datetime.datetime(2060, 1, 5), 0.01831),
-    (datetime.datetime(2070, 1, 5), 0.01787),
+    (qb.Tenor("1Y"), 0.01516),
+    (qb.Tenor("18M"), 0.01474),
+    (qb.Tenor("2Y"), 0.01453),
+    (qb.Tenor("3Y"), 0.01449),
+    (qb.Tenor("4Y"), 0.01466),
+    (qb.Tenor("5Y"), 0.01497),
+    (qb.Tenor("6Y"), 0.01532),
+    (qb.Tenor("7Y"), 0.01566),
+    (qb.Tenor("8Y"), 0.01602),
+    (qb.Tenor("9Y"), 0.01635),
+    (qb.Tenor("10Y"), 0.01666),
+    (qb.Tenor("12Y"), 0.01720),
+    (qb.Tenor("15Y"), 0.01777),
+    (qb.Tenor("20Y"), 0.01833),
+    (qb.Tenor("25Y"), 0.01854),
+    (qb.Tenor("30Y"), 0.01859),
+    (qb.Tenor("40Y"), 0.01831),
+    (qb.Tenor("50Y"), 0.01787),
 ]
 
 usdlibor_cash_instruments = [(qb.Tenor("3M"), 0.0190838)]
@@ -133,21 +133,21 @@ usdlibor_futures_instruments = [
 ]
 
 usdlibor_swap_instruments = [
-    (datetime.datetime(2024, 1, 3), 0.01701),
-    (datetime.datetime(2025, 1, 3), 0.01732),
-    (datetime.datetime(2026, 1, 5), 0.01762),
-    (datetime.datetime(2027, 1, 4), 0.01795),
-    (datetime.datetime(2028, 1, 4), 0.0183),
-    (datetime.datetime(2029, 1, 3), 0.01864),
-    (datetime.datetime(2030, 1, 3), 0.01893),
-    (datetime.datetime(2031, 1, 3), 0.01923),
-    (datetime.datetime(2032, 1, 5), 0.01948),
-    (datetime.datetime(2035, 1, 3), 0.02009),
-    (datetime.datetime(2040, 1, 3), 0.02064),
-    (datetime.datetime(2045, 1, 3), 0.02084),
-    (datetime.datetime(2050, 1, 3), 0.0209),
-    (datetime.datetime(2060, 1, 3), 0.02062),
-    (datetime.datetime(2070, 1, 3), 0.0202),
+    (qb.Tenor("4Y"), 0.01701),
+    (qb.Tenor("5Y"), 0.01732),
+    (qb.Tenor("6Y"), 0.01762),
+    (qb.Tenor("7Y"), 0.01795),
+    (qb.Tenor("8Y"), 0.0183),
+    (qb.Tenor("9Y"), 0.01864),
+    (qb.Tenor("10Y"), 0.01893),
+    (qb.Tenor("11Y"), 0.01923),
+    (qb.Tenor("12Y"), 0.01948),
+    (qb.Tenor("15Y"), 0.02009),
+    (qb.Tenor("20Y"), 0.02064),
+    (qb.Tenor("25Y"), 0.02084),
+    (qb.Tenor("30Y"), 0.0209),
+    (qb.Tenor("40Y"), 0.02062),
+    (qb.Tenor("50Y"), 0.0202),
 ]
 
 fedfunds_libor_swap_data = [
