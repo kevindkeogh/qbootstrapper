@@ -49,7 +49,6 @@ class FuturesInstrumentByDates(Instrument):
         basis (str)             : Accrual basis for the period
                                   [default: act360]
 
-    TODO: Add FuturesInstrumentByTicker
     TODO: Add Futures convexity calculation
     """
 
@@ -62,9 +61,9 @@ class FuturesInstrumentByDates(Instrument):
         self.basis = basis
         self.curve = curve
         self.accrual_period = super(FuturesInstrumentByDates, self).daycount(
-            self.effective, self.maturity, self.basis
+            self.curve.date, self.maturity, self.basis
         )
-        self.instrument_type = "Futures"
+        self.instrument_type = "futures"
 
     def discount_factor(self):
         """Method for returning the discount factor for a future
@@ -100,20 +99,24 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         ------
         basis (str)             : Accrual basis for the period
                                   [default: act360]
+        tenor (Tenor)           : Tenor of the the future
+                                  [default: 3M]
+
 
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, code, price, curve, basis="act360", tenor=Tenor("3M")):
+    def __init__(self, code, price, curve, basis="act360", tenor=None):
         # assignments
         self.code = code
         self.price = price
         self.rate = (100 - price) / 100
-        self.basis = basis
         self.curve = curve
+        self.basis = basis
+        self.tenor = tenor if tenor is not None else Tenor("3M")
 
         self.effective = imm_date(code)
-        self.maturity = self.effective + tenor
+        self.maturity = self.effective + self.tenor
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )

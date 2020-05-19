@@ -177,6 +177,14 @@ fedfunds_libor_swap_data = [
     (datetime.datetime(2040, 1, 3), 0.002213),
     (datetime.datetime(2045, 1, 3), 0.002213),
     (datetime.datetime(2050, 1, 3), 0.002213),
+    # (qb.Tenor("6Y"), 0.002175),
+    # (qb.Tenor("7Y"), 0.002175),
+    # (qb.Tenor("10Y"), 0.002175),
+    # (qb.Tenor("12Y"), 0.002188),
+    # (qb.Tenor("15Y"), 0.0022),
+    # (qb.Tenor("20Y"), 0.002213),
+    # (qb.Tenor("25Y"), 0.002213),
+    # (qb.Tenor("30Y"), 0.002213),
 ]
 
 # Fed funds build
@@ -351,23 +359,28 @@ def compare_curves(dvc_curve, qb_curve):
     print(tabulate.tabulate(records, headers=["Date", "DVC ZR", "QB ZR", "Difference"]))
 
 
-dvc_ois = load_curve("/home/kevindkeogh/Downloads/OIS123119USD.crv")
-dvc_3ml = load_curve("/home/kevindkeogh/Downloads/3MLOIS123119USD.crv")
+def main():
+
+    dvc_ois = load_curve("/home/kevindkeogh/Downloads/OIS123119USD.crv")
+    dvc_3ml = load_curve("/home/kevindkeogh/Downloads/3MLOIS123119USD.crv")
+
+    print("FedFunds")
+    fedfunds.build()
+    compare_curves(dvc_ois, fedfunds)
+    print("")
+    print("3M LIBOR")
+    usdlibor.build()
+    compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
+    print("")
+    print("Simultaneously bootstrapped")
+    fedfunds_libor.build()
+    print("")
+    print("    FedFunds")
+    compare_curves(dvc_ois, fedfunds_libor.discount_curve)
+    print("")
+    print("    3M LIBOR")
+    compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
 
 
-print("FedFunds")
-fedfunds.build()
-compare_curves(dvc_ois, fedfunds)
-print("")
-print("3M LIBOR")
-usdlibor.build()
-compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
-print("")
-print("Simultaneously bootstrapped")
-fedfunds_libor.build()
-print("")
-print("    FedFunds")
-compare_curves(dvc_ois, fedfunds_libor.discount_curve)
-print("")
-print("    3M LIBOR")
-compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
+if __name__ == "__main__":
+    main()

@@ -45,11 +45,14 @@ class LIBORInstrument(Instrument):
         ------
         basis (str)             : Accrual basis for the period
                                   [default: act360]
-        length_type             : Length of the term_length in units
-                                  [default: months]
         payment_adjustment (str): Adjustment to the payment date from the
                                   end of the accrual period
                                   [default: unadjusted]
+        calendar (Calendar)     : Calendar used for holiday adjustments
+                                  [default: weekends]
+        fixing_lag (Tenor )     : Fixing lag between rate setting and first
+                                  accrual date
+                                  [default: 0D]
 
     """
 

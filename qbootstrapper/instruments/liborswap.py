@@ -34,8 +34,8 @@ class LIBORSwapInstrument(SwapInstrument):
     Arguments:
         effective (datetime)                : First accrual start date of
                                               the swap
-        maturity (datetime)                 : Last accrual end date of
-                                              the swap
+        maturity (datetime, Tenor)          : The tenor or the last accrual end
+                                              date of the swap
         rate (float)                        : Fixed rate
         curve (Curve object)                : Associated curve object.
                                               There are callbacks to the
@@ -85,16 +85,25 @@ class LIBORSwapInstrument(SwapInstrument):
                                               Instrument class for implemented
                                               conventions
                                               [default: 'unadjusted']
+        fixed_payment_lag (Tenor)           : Payment lag for each fixed coupon
+                                              payment.
+                                              [default: '0D']
+        float_payment_lag (Tenor)           : Payment lag for each floating
+                                              coupon payment.
+                                              [default: '0D']
+        calendar (Calendar)                 : Holiday calendar used for all
+                                              date adjustments
+                                              [default: 'weekends']
         second (datetime)                   : Specify the first regular roll
                                               date for the accrual periods
                                               [default: False]
         penultimate (datetime)              : Specify the last regular roll
                                               date for the accrual periods
                                               [default: False]
-        fixing_lag (int)                    : Days prior to the first accrual
-                                              period that the floating rate
-                                              is fixed
-                                              [default: 0]
+        fixing_lag (Tenor)                  : Tenor (usually days) prior to the
+                                              first accrual period that the
+                                              floating rate is fixed
+                                              [default: '0D']
         notional (int)                      : Notional amount for use with
                                               calculating swap the swap value.
                                               Larger numbers will be slower,
@@ -159,8 +168,6 @@ class LIBORSwapInstrument(SwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
-                        # np.datetime64(self.maturity.strftime("%Y-%m-%d")),
-                        # time.mktime(self.maturity.timetuple()),
                         guess,
                     )
                 ],

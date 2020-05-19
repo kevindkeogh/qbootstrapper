@@ -46,7 +46,7 @@ class FRAInstrumentByDates(Instrument):
                                   [default: act360]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
-        convention (str)        : Payment date adjustment convention
+        payment_adjustment (str): Payment date adjustment convention
                                   [default: following]
     """
 
@@ -58,7 +58,7 @@ class FRAInstrumentByDates(Instrument):
         curve,
         basis="act360",
         calendar=None,
-        convention="following",
+        payment_adjustment="following",
     ):
         # assignments
         self.effective = effective
@@ -70,9 +70,10 @@ class FRAInstrumentByDates(Instrument):
             self.effective, self.maturity, self.basis
         )
         self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.payment_adjustment = payment_adjustment
         self.instrument_type = "FRA"
 
-        self.payment = calendar.adjust(maturity, convention)
+        self.payment = calendar.adjust(self.maturity, self.payment_adjustment)
 
     def discount_factor(self):
         """Method for returning the discount factor for a FRA
@@ -107,7 +108,7 @@ class FRAInstrumentByDateAndTenor(Instrument):
                                   [default: act360]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
-        convention (str)        : Payment date adjustment convention
+        payment_adjustment (str): Payment date adjustment convention
                                   [default: following]
     """
 
@@ -119,21 +120,23 @@ class FRAInstrumentByDateAndTenor(Instrument):
         curve,
         basis="act360",
         calendar=Calendar("weekends"),
-        convention="following",
+        payment_adjustment="following",
     ):
         # assignments
         self.effective = effective
         self.maturity = effective + tenor
-        self.payment = calendar.adjust(self.maturity, convention)
         self.tenor = tenor
         self.rate = rate
         self.basis = basis
         self.curve = curve
         self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.payment_adjustment = payment_adjustment
 
         self.accrual_period = super(FRAInstrumentByDateAndTenor, self).daycount(
             self.effective, self.maturity, self.basis
         )
+
+        self.payment = calendar.adjust(self.maturity, self.payment_adjustment)
         self.instrument_type = "fra"
 
     def discount_factor(self):
