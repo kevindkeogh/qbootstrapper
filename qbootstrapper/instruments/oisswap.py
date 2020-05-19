@@ -225,7 +225,6 @@ class OISSwapInstrument(SwapInstrument):
         start_date = period["accrual_start"].astype("<M8[s]")
         end_date = period["accrual_end"].astype("<M8[s]")
         one_day = np.timedelta64(1, "D")
-        start_day = start_date.astype(object).weekday()
         first_dates = np.arange(start_date, end_date, one_day)
         # Remove all Saturdays and Sundays
         first_dates = first_dates[
