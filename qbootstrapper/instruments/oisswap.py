@@ -20,6 +20,7 @@ import time
 # qlib libraries
 from qbootstrapper.instruments import SwapInstrument
 
+
 if sys.version_info > (3,):
     long = int
 
@@ -144,8 +145,18 @@ class OISSwapInstrument(SwapInstrument):
             np.array(
                 [
                     (
-                        np.datetime64(self.maturity.strftime("%Y-%m-%d")),
-                        time.mktime(self.maturity.timetuple()),
+                        np.datetime64(
+                            self.fixed_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.fixed_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
+                        # np.datetime64(self.maturity.strftime("%Y-%m-%d")),
+                        # time.mktime(self.maturity.timetuple()),
                         guess,
                     )
                 ],
@@ -158,6 +169,9 @@ class OISSwapInstrument(SwapInstrument):
 
         for period in self.float_schedule.periods:
             forward_rate = self.__forward_rate(interpolator, period)
+            accrual_period = super(OISSwapInstrument, self).daycount(
+                period["accrual_start"], period["accrual_end"], self.float_basis
+            )
             period["cashflow"] = forward_rate * self.notional
 
         payment_dates = self.float_schedule.periods["payment_date"].astype("<M8[s]")
@@ -212,19 +226,16 @@ class OISSwapInstrument(SwapInstrument):
         end_date = period["accrual_end"].astype("<M8[s]")
         one_day = np.timedelta64(1, "D")
         start_day = start_date.astype(object).weekday()
-        rate = 1
         first_dates = np.arange(start_date, end_date, one_day)
-        # replace all Saturdays and Sundays with Fridays
-        fridays = first_dates[4 - start_day :: 7]
-        first_dates[5 - start_day :: 7] = fridays[
-            : len(first_dates[5 - start_day :: 7])
-        ]
-        first_dates[6 - start_day :: 7] = fridays[
-            : len(first_dates[6 - start_day :: 7])
-        ]
-        second_dates = first_dates + one_day
+        # Remove all Saturdays and Sundays
+        first_dates = first_dates[((first_dates.astype("datetime64[D]").view("int64") - 4) % 7) < 5]
+        second_dates = np.roll(first_dates, -1)
+        second_dates[-1] = period["accrual_end"]
+
+        # weights = (second_dates - first_dates) / np.timedelta64(1, "D")
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
+        # rates = ((initial_dfs / end_dfs) - 1) * (360 / weights)
         rates = initial_dfs / end_dfs
         rate = rates.prod() - 1
         return rate

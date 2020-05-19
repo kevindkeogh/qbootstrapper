@@ -42,6 +42,8 @@ class SwapInstrument(Instrument):
         float_period_adjustment="unadjusted",
         fixed_payment_adjustment="unadjusted",
         float_payment_adjustment="unadjusted",
+        fixed_payment_lag=None,
+        float_payment_lag=None,
         calendar=None,
         second=False,
         penultimate=False,
@@ -78,11 +80,17 @@ class SwapInstrument(Instrument):
         self.fixed_tenor = fixed_tenor if fixed_tenor is not None else Tenor("6M")
         self.fixed_period_adjustment = fixed_period_adjustment
         self.fixed_payment_adjustment = fixed_payment_adjustment
+        self.fixed_payment_lag = (
+            fixed_payment_lag if fixed_payment_lag is not None else Tenor("0D")
+        )
 
         self.float_basis = float_basis
         self.float_tenor = float_tenor if float_tenor is not None else Tenor("6M")
         self.float_period_adjustment = float_period_adjustment
         self.float_payment_adjustment = float_payment_adjustment
+        self.float_payment_lag = (
+            float_payment_lag if float_payment_lag is not None else Tenor("0D")
+        )
 
         self.rate_tenor = rate_tenor if rate_tenor is not None else Tenor("ON")
         self.rate_basis = rate_basis
@@ -103,6 +111,7 @@ class SwapInstrument(Instrument):
                 payment_adjustment=self.fixed_payment_adjustment,
                 fixing_lag=self.fixing_lag,
                 calendar=self.calendar,
+                payment_lag=self.fixed_payment_lag,
             )
             self.float_schedule = Schedule(
                 self.effective,
@@ -114,6 +123,7 @@ class SwapInstrument(Instrument):
                 payment_adjustment=self.float_payment_adjustment,
                 fixing_lag=self.fixing_lag,
                 calendar=self.calendar,
+                payment_lag=self.float_payment_lag,
             )
         else:
             self.fixed_schedule = Schedule(
@@ -124,6 +134,7 @@ class SwapInstrument(Instrument):
                 payment_adjustment=self.fixed_payment_adjustment,
                 fixing_lag=self.fixing_lag,
                 calendar=self.calendar,
+                payment_lag=self.fixed_payment_lag,
             )
             self.float_schedule = Schedule(
                 self.effective,
@@ -133,4 +144,5 @@ class SwapInstrument(Instrument):
                 payment_adjustment=self.float_payment_adjustment,
                 fixing_lag=self.fixing_lag,
                 calendar=self.calendar,
+                payment_lag=self.float_payment_lag,
             )

@@ -123,11 +123,10 @@ class Calendar(object):
                                         preceding
                                         modified following
         """
-        if (
-            convention == "unadjusted"
-            or not self.is_holiday(date)
-            or not self.is_weekend(date)
-        ):
+        if convention == "unadjusted":
+            return date
+
+        if not self.is_holiday(date) and not self.is_weekend(date):
             return date
 
         if convention == "following":

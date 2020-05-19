@@ -149,8 +149,18 @@ class LIBORSwapInstrument(SwapInstrument):
             np.array(
                 [
                     (
-                        np.datetime64(self.maturity.strftime("%Y-%m-%d")),
-                        time.mktime(self.maturity.timetuple()),
+                        np.datetime64(
+                            self.fixed_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.fixed_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
+                        # np.datetime64(self.maturity.strftime("%Y-%m-%d")),
+                        # time.mktime(self.maturity.timetuple()),
                         guess,
                     )
                 ],

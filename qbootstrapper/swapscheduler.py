@@ -68,6 +68,7 @@ class Schedule:
         period_adjustment="unadjusted",
         payment_adjustment="unadjusted",
         fixing_lag=None,
+        payment_lag=None,
         calendar=None,
     ):
 
@@ -80,6 +81,7 @@ class Schedule:
         self.second = second
         self.penultimate = penultimate
         self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("1D")
+        self.payment_lag = payment_lag if payment_lag is not None else Tenor("0D")
         self.calendar = calendar if calendar is not None else Calendar("weekends")
 
         # date generation routine
@@ -110,7 +112,7 @@ class Schedule:
             self._period_starts, self.fixing_lag, adjustment="preceding"
         )
         self._payment_dates = self._gen_date_adjustments(
-            self._period_ends, Tenor("0D"), adjustment=self.payment_adjustment
+            self._period_ends, self.payment_lag, adjustment=self.payment_adjustment
         )
 
     def _create_schedule(self):

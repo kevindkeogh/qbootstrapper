@@ -16,7 +16,7 @@ import sys
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
-from qbootstrapper.utils import Calendar
+from qbootstrapper.utils import Calendar, Tenor
 
 if sys.version_info > (3,):
     long = int
@@ -60,30 +60,34 @@ class LIBORInstrument(Instrument):
         tenor,
         curve,
         basis="act360",
-        length_type="months",
         payment_adjustment="unadjusted",
         calendar=None,
+        fixing_lag=None,
     ):
         # assignments
         self.effective = effective
         self.rate = rate
         self.tenor = tenor
+        self.curve = curve
         self.basis = basis
         self.payment_adjustment = payment_adjustment
         self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("0D")
         self.instrument_type = "cash"
 
         # calculations
         self._date_calculations()
         self.accrual_period = super(LIBORInstrument, self).daycount(
-            self.effective, self.maturity, self.basis
+            self.curve.date, self.maturity, self.basis
         )
 
     def _date_calculations(self):
         """Method for setting the accrual period and dates for a Cash
         instrument
         """
-        self.maturity = self.effective + self.tenor
+        self.maturity = self.calendar.advance(
+            self.effective, self.tenor, self.payment_adjustment
+        )
         self.payment_date = self.calendar.adjust(self.maturity, self.payment_adjustment)
 
     def discount_factor(self):

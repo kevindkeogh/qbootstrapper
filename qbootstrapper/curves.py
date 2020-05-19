@@ -75,6 +75,7 @@ class Curve(object):
             ],
         )
 
+        self.date = effective_date
         self.curve_type = "IR_curve"
         self.discount_curve = discount_curve
         self.instruments = []
@@ -108,7 +109,7 @@ class Curve(object):
                 [
                     (
                         np.datetime64(curve_date.strftime("%Y-%m-%d")),
-                        time.mktime(instrument.maturity.timetuple()),
+                        time.mktime(curve_date.timetuple()),
                         discount_factor,
                     )
                 ],
@@ -157,7 +158,7 @@ class Curve(object):
         if ret:
             return maturities, discount_factors
 
-    def zeros(self, ret=False):
+    def zeros(self, ret=False, show=True):
         """Prints the zero rate curve
         Optionally return tuple of the maturities and discount factors
         """
@@ -173,8 +174,9 @@ class Curve(object):
             ) / 365
             zero_rates[i] = -self.curve[i]["discount_factor"] / days
 
-        for i in range(len(self.curve)):
-            print("{0} {1:.4f}%".format(maturities[i], zero_rates[i] * 100))
+        if show:
+            for i in range(len(self.curve)):
+                print("{0} {1:.4f}%".format(maturities[i], zero_rates[i] * 100))
 
         if ret:
             return maturities, zero_rates
@@ -278,12 +280,18 @@ class SimultaneousStrippedCurve(Curve):
                     [
                         (
                             np.datetime64(
-                                instrument.discount_instrument.maturity.strftime(
-                                    "%Y-%m-%d"
-                                )
+                                instrument.discount_instrument.leg_two_schedule.periods[
+                                    -1
+                                ]["payment_date"]
+                                .astype(object)
+                                .strftime("%Y-%m-%d")
                             ),
                             time.mktime(
-                                instrument.discount_instrument.maturity.timetuple()
+                                instrument.discount_instrument.leg_two_schedule.periods[
+                                    -1
+                                ]["payment_date"]
+                                .astype(object)
+                                .timetuple()
                             ),
                             leg_one_df,
                         )
@@ -296,12 +304,18 @@ class SimultaneousStrippedCurve(Curve):
                     [
                         (
                             np.datetime64(
-                                instrument.projection_instrument.maturity.strftime(
-                                    "%Y-%m-%d"
-                                )
+                                instrument.projection_instrument.fixed_schedule.periods[
+                                    -1
+                                ]["payment_date"]
+                                .astype(object)
+                                .strftime("%Y-%m-%d")
                             ),
                             time.mktime(
-                                instrument.projection_instrument.maturity.timetuple()
+                                instrument.projection_instrument.fixed_schedule.periods[
+                                    -1
+                                ]["payment_date"]
+                                .astype(object)
+                                .timetuple()
                             ),
                             leg_two_df,
                         )

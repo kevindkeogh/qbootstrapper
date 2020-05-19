@@ -7,11 +7,16 @@ below.
 """
 import datetime
 import copy
+import time
+
+import numpy as np
+import scipy.interpolate
+import tabulate
 
 import qbootstrapper as qb
 
 curve_effective = datetime.datetime(2019, 12, 31)
-effective = datetime.datetime(2020, 1, 2)
+effective = datetime.datetime(2020, 1, 3)
 
 # Curves
 fedfunds = qb.Curve(curve_effective)
@@ -22,18 +27,24 @@ fedfunds_short_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
+    "fixed_basis": "act360",
+    "float_basis": "act360",
+    "fixed_payment_lag": qb.Tenor("2D"),
+    "float_payment_lag": qb.Tenor("2D"),
     "calendar": qb.Calendar("FRB"),
 }
 
 fedfunds_conventions = {
     "fixed_tenor": qb.Tenor("6M"),
     "float_tenor": qb.Tenor("3M"),
-    "fixed_basis": "Act360",
-    "float_basis": "Act360",
+    "fixed_basis": "act360",
+    "float_basis": "act360",
     "fixed_period_adjustment": "following",
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
+    "fixed_payment_lag": qb.Tenor("2D"),
+    "float_payment_lag": qb.Tenor("2D"),
     "calendar": qb.Calendar("FRB"),
 }
 
@@ -46,12 +57,19 @@ usdlibor_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
+    "fixed_payment_lag": qb.Tenor("2D"),
+    "float_payment_lag": qb.Tenor("2D"),
     "rate_tenor": qb.Tenor("3M"),
-    "calendar": qb.Calendar("NEWYORK"),
+    "calendar": qb.Calendar("FRB", "NEWYORK"),
 }
 
 fedfunds_cash = qb.instruments.LIBORInstrument(
-    curve_effective, 0.0155, qb.Tenor("ON"), fedfunds, payment_adjustment="following",
+    curve_effective,
+    0.0155,
+    qb.Tenor("ON"),
+    fedfunds,
+    payment_adjustment="following",
+    calendar=qb.Calendar("FRB"),
 )
 
 fedfunds_swap_onew = qb.OISSwapInstrument(
@@ -85,13 +103,13 @@ fedfunds_swap_threew = qb.OISSwapInstrument(
 )
 
 fedfunds_short_swaps = [
-    (qb.Tenor("1M"), 0.01553, 1),
-    (qb.Tenor("2M"), 0.01559, 2),
-    (qb.Tenor("3M"), 0.01561, 3),
-    (qb.Tenor("4M"), 0.01559, 4),
-    (qb.Tenor("5M"), 0.01556, 5),
-    (qb.Tenor("6M"), 0.01553, 6),
-    (qb.Tenor("9M"), 0.01537, 9),
+    (qb.Tenor("1M"), 0.01553),
+    (qb.Tenor("2M"), 0.01559),
+    (qb.Tenor("3M"), 0.01561),
+    (qb.Tenor("4M"), 0.01559),
+    (qb.Tenor("5M"), 0.01556),
+    (qb.Tenor("6M"), 0.01553),
+    (qb.Tenor("9M"), 0.01537),
 ]
 
 fedfunds_long_swaps = [
@@ -151,10 +169,10 @@ usdlibor_swap_instruments = [
 ]
 
 fedfunds_libor_swap_data = [
-    (datetime.datetime(2026, 1, 5), 0.002175),
-    (datetime.datetime(2027, 1, 4), 0.002175),
+    (datetime.datetime(2026, 1, 3), 0.002175),
+    (datetime.datetime(2027, 1, 3), 0.002175),
     (datetime.datetime(2030, 1, 3), 0.002175),
-    (datetime.datetime(2032, 1, 5), 0.002188),
+    (datetime.datetime(2032, 1, 3), 0.002188),
     (datetime.datetime(2035, 1, 3), 0.0022),
     (datetime.datetime(2040, 1, 3), 0.002213),
     (datetime.datetime(2045, 1, 3), 0.002213),
@@ -167,30 +185,29 @@ fedfunds.add_instrument(fedfunds_swap_onew)
 fedfunds.add_instrument(fedfunds_swap_twow)
 fedfunds.add_instrument(fedfunds_swap_threew)
 
-for (maturity, rate, months) in fedfunds_short_swaps:
+for (tenor, rate) in fedfunds_short_swaps:
     inst = qb.OISSwapInstrument(
         effective,
-        maturity,
+        tenor,
         rate,
         fedfunds,
-        fixed_tenor=qb.Tenor("{months}M".format(**locals())),
-        float_tenor=qb.Tenor("{months}M".format(**locals())),
+        fixed_tenor=tenor,
+        float_tenor=tenor,
         **fedfunds_short_conventions
     )
     fedfunds.add_instrument(inst)
 
-for (maturity, rate) in fedfunds_long_swaps:
+for (tenor, rate) in fedfunds_long_swaps:
     inst = qb.OISSwapInstrument(
-        effective, maturity, rate, fedfunds, **fedfunds_conventions
+        effective, tenor, rate, fedfunds, **fedfunds_conventions
     )
     fedfunds.add_instrument(inst)
 
 
 # USD LIBOR build
-
 for (tenor, rate) in usdlibor_cash_instruments:
     inst = qb.LIBORInstrument(
-        effective, rate, tenor, usdlibor, payment_adjustment="following",
+        effective, rate, tenor, usdlibor, payment_adjustment="following", fixing_lag=qb.Tenor("2D")
     )
     usdlibor.add_instrument(inst)
 
@@ -220,14 +237,14 @@ for inst in fedfunds_short_short_instruments:
     new_inst.curve = fedfunds_short
     fedfunds_short.add_instrument(new_inst)
 
-for (maturity, rate, months) in fedfunds_short_swaps:
+for (tenor, rate) in fedfunds_short_swaps:
     inst = qb.OISSwapInstrument(
         effective,
-        maturity,
+        tenor,
         rate,
         fedfunds_short,
-        fixed_tenor=qb.Tenor("{months}M".format(**locals())),
-        float_tenor=qb.Tenor("{months}M".format(**locals())),
+        fixed_tenor=tenor,
+        float_tenor=tenor,
         **fedfunds_short_conventions
     )
     fedfunds_short.add_instrument(inst)
@@ -278,17 +295,75 @@ for idx, (maturity, rate) in enumerate(fedfunds_libor_swap_data):
     instrument_pair = qb.SimultaneousInstrument(ois_inst, libor_inst, fedfunds_libor)
     fedfunds_libor.add_instrument(instrument_pair)
 
+
+def load_curve(filename):
+    dates = []
+    dfs = []
+    with open(filename, "r", newline="") as fh:
+        for row in fh:
+            try:
+                els = row.strip().split(" ")
+                serial = els[0]
+                df = els[-1]
+                dfs.append(np.log(float(df)))
+                dates.append(
+                    time.mktime(
+                        (
+                            curve_effective + datetime.timedelta(days=int(serial))
+                        ).timetuple()
+                    )
+                )
+            except:
+                pass
+
+
+    return scipy.interpolate.PchipInterpolator(np.array(dates), np.array(dfs))
+
+
+def as_percent(num):
+    return "{0:.5f}".format(num * 100)
+
+
+def compare_curves(dvc_curve, qb_curve):
+    records = []
+    dates, qb_zeros = qb_curve.zeros(True, False)
+    for i, maturity in enumerate(dates):
+        years = ((maturity - dates[0]) / np.timedelta64(1, "D")) / 365.0
+        if i == 0:
+            df = 0
+            dvc_zr = 0
+        else:
+            df = dvc_curve(time.mktime(maturity.astype(object).timetuple()))
+            dvc_zr = -df / years
+        records.append(
+            [
+                maturity,
+                as_percent(dvc_zr),
+                as_percent(qb_zeros[i]),
+                "{0:.4f}".format(((dvc_zr - qb_zeros[i]) * 10000.0)),
+            ]
+        )
+
+    print(tabulate.tabulate(records, headers=["Date", "DVC ZR", "QB ZR", "Difference"]))
+
+
+dvc_ois = load_curve("/home/kevindkeogh/Downloads/OIS123119USD.crv")
+dvc_3ml = load_curve("/home/kevindkeogh/Downloads/3MLOIS123119USD.crv")
+
+
 print("FedFunds")
 fedfunds.build()
-fedfunds.view()
-fedfunds.zeros()
+compare_curves(dvc_ois, fedfunds)
+print("")
 print("3M LIBOR")
 usdlibor.build()
-usdlibor.view()
-usdlibor.zeros()
-print("FedFunds LIBOR")
+compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
+print("")
+print("Simultaneously bootstrapped")
 fedfunds_libor.build()
-fedfunds_libor.discount_curve.view()
-fedfunds_libor.discount_curve.zeros()
-fedfunds_libor.projection_curve.view()
-fedfunds_libor.projection_curve.zeros()
+print("")
+print("    FedFunds")
+compare_curves(dvc_ois, fedfunds_libor.discount_curve)
+print("")
+print("    3M LIBOR")
+compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
