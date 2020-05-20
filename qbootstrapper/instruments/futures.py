@@ -16,7 +16,7 @@ import sys
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
-from qbootstrapper.utils import imm_date, Tenor
+from qbootstrapper.utils import imm_date, Tenor, Calendar
 
 if sys.version_info > (3,):
     long = int
@@ -48,20 +48,23 @@ class FuturesInstrumentByDates(Instrument):
         ------
         basis (str)             : Accrual basis for the period
                                   [default: act360]
+        calendar (Calendar)     : Calendar used for payment date adjustment
+                                  [default: weekends]
 
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, effective, maturity, price, curve, basis="act360"):
+    def __init__(self, effective, maturity, price, curve, basis="act360", calendar=None):
         # assignments
         self.effective = effective
         self.maturity = maturity
         self.price = price
         self.rate = (100 - price) / 100
-        self.basis = basis
         self.curve = curve
+        self.basis = basis
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.accrual_period = super(FuturesInstrumentByDates, self).daycount(
-            self.curve.date, self.maturity, self.basis
+            self.effective, self.maturity, self.basis
         )
         self.instrument_type = "futures"
 
@@ -101,12 +104,14 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
                                   [default: act360]
         tenor (Tenor)           : Tenor of the the future
                                   [default: 3M]
+        calendar (Calendar)     : Calendar used for payment date adjustment
+                                  [default: weekends]
 
 
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, code, price, curve, basis="act360", tenor=None):
+    def __init__(self, code, price, curve, basis="act360", calendar=None, tenor=None):
         # assignments
         self.code = code
         self.price = price
@@ -114,6 +119,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.curve = curve
         self.basis = basis
         self.tenor = tenor if tenor is not None else Tenor("3M")
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
 
         self.effective = imm_date(code)
         self.maturity = self.effective + self.tenor
