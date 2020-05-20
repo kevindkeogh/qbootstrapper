@@ -232,18 +232,24 @@ class OISSwapInstrument(SwapInstrument):
         start_date = period["accrual_start"].astype("<M8[s]")
         end_date = period["accrual_end"].astype("<M8[s]")
         one_day = np.timedelta64(1, "D")
+        start_day = start_date.astype(object).weekday()
         first_dates = np.arange(start_date, end_date, one_day)
         # Remove all Saturdays and Sundays
-        first_dates = first_dates[
-            ((first_dates.astype("datetime64[D]").view("int64") - 4) % 7) < 5
+        # first_dates = first_dates[
+        #     ((first_dates.astype("datetime64[D]").view("int64") - 4) % 7) < 5
+        # ]
+        # second_dates = np.roll(first_dates, -1)
+        # second_dates[-1] = period["accrual_end"]
+        fridays = first_dates[4 - start_day :: 7]
+        first_dates[5 - start_day :: 7] = fridays[
+            : len(first_dates[5 - start_day :: 7])
         ]
-        second_dates = np.roll(first_dates, -1)
-        second_dates[-1] = period["accrual_end"]
-
-        # weights = (second_dates - first_dates) / np.timedelta64(1, "D")
+        first_dates[6 - start_day :: 7] = fridays[
+            : len(first_dates[6 - start_day :: 7])
+        ]
+        second_dates = first_dates + one_day
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
-        # rates = ((initial_dfs / end_dfs) - 1) * (360 / weights)
         rates = initial_dfs / end_dfs
         rate = rates.prod() - 1
         return rate

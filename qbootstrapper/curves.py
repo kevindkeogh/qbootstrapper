@@ -262,7 +262,12 @@ class SimultaneousStrippedCurve(Curve):
             raise TypeError("Instruments must be a of type Instrument")
 
     def build(self):
-        """
+        """Build the underlying curves as much as possible, then build each of
+        the simultaneous instruments iteratively.
+
+        Note that the order of the instruments must be strictly earliest to
+        last, and the first simultaneous instrument must be after the last
+        instrument in each of the projection and discount curves.
         """
         self.discount_curve.build()
         self.projection_curve.build()
@@ -329,8 +334,6 @@ class SimultaneousStrippedCurve(Curve):
         self._built = True
 
     def view(self):
-        """
-        """
         raise NotImplementedError(
             "Please view the individual curves using the"
             " self.discount_curve and"
@@ -338,8 +341,6 @@ class SimultaneousStrippedCurve(Curve):
         )
 
     def zeros(self):
-        """
-        """
         raise NotImplementedError(
             "Please view the individual curves using the"
             " self.discount_curve and"

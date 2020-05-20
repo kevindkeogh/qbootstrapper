@@ -24,7 +24,17 @@ if sys.version_info > (3,):
 
 
 class Tenor(object):
-    """
+    """Tenor class
+    Class that interprets a string such as "6M" or "10Y" and holds the
+    timedelta for use in calculating dates. The class uses dunder (__...)
+    methods to allow for easy adding and subtracting from dates. Note
+    that only right-{add,subtract} are supported (i.e., date + tenor),
+    left-{add,subtract} are not supported, as they don't have an obvious
+    meaning (tenor - date?)
+
+    Arguments:
+        name (string)               : The named tenor, supports ON, D, W{,K},
+                                      M{,O}, and Y{,R}
     """
 
     def __init__(self, name=None, *args):
@@ -72,18 +82,53 @@ class Tenor(object):
 
 
 class Calendar(object):
-    """
+    """Calendar class
+    Class that holds a list of holidays and weekends that can be used to
+    advance and reverse dates. Also includes methods to adjust for business
+    day conventions.
+
+    Arguments:
+        names (string)              : A variable number of strings representing
+                                      holiday centers. These can be found in
+                                      the calendars folder. Note that the
+                                      'weekends' calendar is also supported,
+                                      but is a no-op.
+        weekends (list of ints)     : A list representing the weekdays that
+                                      should be considered weekends. Monday is
+                                      0, Sunday is 6.
+                                      [default: [5, 6]]
+
+    Methods:
+        advance (                   : A method to advance, using the applicable
+                 now: datetime,       holiday center, the date by a given tenor
+                 tenor: Tenor,          convention is defaulted to following
+                 convention: str
+                 )
+        reverse (                   : A method to reverse, using the applicable
+                 now: datetime,       holiday center, the date by a given tenor
+                 tenor: Tenor,          convention is defaulted to following
+                 convention: str
+                 )
+        adjust (                    : A method to adjust a date given a
+                 date: datetime,      business day convention
+                 convention: str        Supported conventions are:
+                 )                          unadjusted,
+                                            following
+                                            preceding
+                                            modified following
+
     """
 
     def __init__(self, *args, weekends=[5, 6]):
         self.holidays = set()
         self.weekends = weekends
+        self.name = ""
 
         for idx, arg in enumerate(args):
             if arg.lower() == "weekends":
                 continue
 
-            if idx == 0:
+            if self.name == "":
                 self.name = str(arg)
             else:
                 self.name += " " + str(arg)
