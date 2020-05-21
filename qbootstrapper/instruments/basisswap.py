@@ -11,6 +11,7 @@ discount factors for swaps are calculated using a root-finding algorithm.
 """
 # python libraries
 from __future__ import division
+import datetime
 import numpy as np
 import scipy.interpolate
 import scipy.optimize
@@ -20,7 +21,7 @@ import time
 # qlib libraries
 from qbootstrapper.instruments import SwapInstrument
 from qbootstrapper.swapscheduler import Schedule
-from qbootstrapper.utils import Tenor
+from qbootstrapper.utils import Calendar, Tenor
 
 
 if sys.version_info > (3,):
@@ -28,7 +29,125 @@ if sys.version_info > (3,):
 
 
 class BasisSwapInstrument(SwapInstrument):
-    """
+    """Basis swap instrument class for use with Swap Curve bootstrapper.
+
+    This class can be utilized to hold the market data and conventions
+    for a single basis swap, which is later utilized in when the .build()
+    method is called on the curve where this instrument has been added.
+
+    Arguments:
+        effective (datetime)                : First accrual start date of
+                                              the swap
+        maturity (datetime, Tenor)          : The tenor or the last accrual end
+                                              date of the swap
+        curve (Curve object)                : Associated curve object.
+                                              There are callbacks to the
+                                              curve for prior discount
+                                              factors, so it must be
+                                              assigned
+
+        kwargs (optional)
+        -----------------
+        leg_one_fixing_lag=None,
+        leg_two_fixing_lag=None,
+        leg_one_rate_tenor=None,
+        leg_one_rate_basis="act360",
+        leg_two_rate_tenor=None,
+        leg_two_rate_basis="act360",
+    ):
+        leg_one_spread (float)              : Spread on the floating rate
+                                              for the first leg
+                                              [default: 0]
+        leg_two_spread (float)              : Spread on the floating rate
+                                              for the second leg
+                                              [default: 0]
+        leg_one_basis (string)              : Accrual basis of the first
+                                              leg. See daycount method of
+                                              base Instrument class for
+                                              implemented conventions
+                                              [default: 'act360']
+        leg_two_basis (string)              : Accrual basis of the second
+                                              leg. See daycount method of
+                                              base Instrument class for
+                                              implemented conventions
+                                              [default: 'act360']
+        leg_one_tenor (Tenor)               : Length of the first leg's accrual
+                                              period
+                                              [default: 3M]
+        leg_two_tenor (Tenor)               : Length of the second leg's
+                                              accrual period
+                                              [default: 3M]
+        leg_one_period_adjustment (string)  : Adjustment type for the first
+                                              leg's accrual periods. See the
+                                              _date_adjust method of the base
+                                              Instrument class for implemented
+                                              conventions
+                                              [default: 'unadjusted']
+        leg_two_period_adjustment (string)  : Adjustment type for the second
+                                              leg's accrual periods. See the
+                                              _date_adjust method of the base
+                                              Instrument class for implemented
+                                              conventions
+                                              [default: 'unadjusted']
+        leg_one_payment_adjustment (string) : Adjustment type for first leg's
+                                              payment periods. See the
+                                              _date_adjust method for the base
+                                              Instrument class for implemented
+                                              conventions
+                                              [default: 'unadjusted']
+        leg_one_payment_adjustment (string) : Adjustment type for second leg's
+                                              payment periods. See the
+                                              _date_adjust method for the base
+                                              Instrument class for implemented
+                                              conventions
+                                              [default: 'unadjusted']
+        leg_one_payment_lag (Tenor)         : Payment lag for each coupon
+                                              payment on the first leg.
+                                              [default: '0D']
+        leg_two_payment_lag (Tenor)         : Payment lag for each coupon
+                                              payment on the second leg.
+                                              [default: '0D']
+        calendar (Calendar)                 : Holiday calendar used for all
+                                              date adjustments
+        second (datetime)                   : Specify the first regular roll
+                                              date for the accrual periods
+                                              [default: False]
+        penultimate (datetime)              : Specify the last regular roll
+                                              date for the accrual periods
+                                              [default: False]
+        notional (int)                      : Notional amount for use with
+                                              calculating swap the swap value.
+                                              Larger numbers will be slower,
+                                              but more exact.
+        leg_one_fixing_lag (Tenor)          : Tenor (usually days) prior to the
+                                              first accrual period that the
+                                              floating rate is fixed for the
+                                              first leg
+                                              [default: '0D']
+        leg_two_fixing_lag (Tenor)          : Tenor (usually days) prior to the
+                                              first accrual period that the
+                                              floating rate is fixed for the
+                                              second leg
+                                              [default: '0D']
+                                              [default: 100]
+        leg_one_rate_tenor (Tenor)          : Length of the floating rate
+                                              accrual period for the first leg
+                                              [default: ON]
+        leg_one_rate_basis (string)         : Accrual basis of the rate for the
+                                              first leg.
+                                              See the daycount method of the
+                                              base Instrument class for
+                                              implemented conventions.
+                                              [default: 'act360']
+        leg_two_rate_tenor (Tenor)          : Length of the floating rate
+                                              accrual period for the second leg
+                                              [default: ON]
+        leg_two_rate_basis (string)         : Accrual basis of the rate for the
+                                              second leg.
+                                              See the daycount method of the
+                                              base Instrument class for
+                                              implemented conventions.
+                                              [default: 'act360']
     """
 
     def __init__(
@@ -46,6 +165,9 @@ class BasisSwapInstrument(SwapInstrument):
         leg_two_period_adjustment="unadjusted",
         leg_one_payment_adjustment="unadjusted",
         leg_two_payment_adjustment="unadjusted",
+        leg_one_payment_lag=None,
+        leg_two_payment_lag=None,
+        calendar=None,
         second=False,
         penultimate=False,
         notional=100,
@@ -59,8 +181,7 @@ class BasisSwapInstrument(SwapInstrument):
 
         # assignments
         self.instrument_type = "basis_swap"
-        self.effective = effective
-        self.maturity = maturity
+
         if bool(second):
             self.second = second
         if bool(penultimate):
@@ -75,11 +196,18 @@ class BasisSwapInstrument(SwapInstrument):
         self.leg_one_tenor = leg_one_tenor if leg_one_tenor is not None else Tenor("3M")
         self.leg_one_period_adjustment = leg_one_period_adjustment
         self.leg_one_payment_adjustment = leg_one_payment_adjustment
+        self.leg_one_payment_lag = leg_one_payment_lag
+        self.leg_one_payment_lag = (
+            leg_one_payment_lag if leg_one_payment_lag is not None else Tenor("0D")
+        )
 
         self.leg_two_basis = leg_two_basis
         self.leg_two_tenor = leg_two_tenor if leg_two_tenor is not None else Tenor("3M")
         self.leg_two_period_adjustment = leg_two_period_adjustment
         self.leg_two_payment_adjustment = leg_two_payment_adjustment
+        self.leg_two_payment_lag = (
+            leg_two_payment_lag if leg_two_payment_lag is not None else Tenor("0D")
+        )
 
         self.leg_one_fixing_lag = (
             leg_one_fixing_lag if leg_one_fixing_lag is not None else Tenor("0D")
@@ -97,6 +225,18 @@ class BasisSwapInstrument(SwapInstrument):
         )
         self.leg_two_rate_basis = leg_two_rate_basis
 
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.effective = effective + self.leg_one_fixing_lag
+
+        if type(maturity) is datetime.datetime:
+            self.maturity = maturity
+        elif type(maturity) is Tenor:
+            self.maturity = self.calendar.advance(
+                self.effective, maturity, "unadjusted"
+            )
+        else:
+            raise ValueError("Maturity must be of type datetime or Tenor")
+
         self._set_schedules()
 
     def _set_schedules(self):
@@ -111,9 +251,11 @@ class BasisSwapInstrument(SwapInstrument):
                 penultimate=self.penultimate,
                 period_adjustment=self.leg_one_period_adjustment,
                 payment_adjustment=self.leg_one_payment_adjustment,
+                payment_lag=self.leg_one_payment_lag,
                 fixing_lag=self.leg_one_fixing_lag,
+                calendar=self.calendar,
             )
-            self.leg_two_shcedule = Schedule(
+            self.leg_two_schedule = Schedule(
                 self.effective,
                 self.maturity,
                 self.leg_two_tenor,
@@ -121,6 +263,9 @@ class BasisSwapInstrument(SwapInstrument):
                 penultimate=self.penultimate,
                 period_adjustment=self.leg_two_period_adjustment,
                 payment_adjustment=self.leg_two_payment_adjustment,
+                payment_lag=self.leg_two_payment_lag,
+                fixing_lag=self.leg_two_fixing_lag,
+                calendar=self.calendar,
             )
         else:
             self.leg_one_schedule = Schedule(
@@ -129,6 +274,9 @@ class BasisSwapInstrument(SwapInstrument):
                 self.leg_one_tenor,
                 period_adjustment=self.leg_one_period_adjustment,
                 payment_adjustment=self.leg_one_payment_adjustment,
+                payment_lag=self.leg_one_payment_lag,
+                fixing_lag=self.leg_one_fixing_lag,
+                calendar=self.calendar,
             )
             self.leg_two_schedule = Schedule(
                 self.effective,
@@ -136,6 +284,9 @@ class BasisSwapInstrument(SwapInstrument):
                 self.leg_two_tenor,
                 period_adjustment=self.leg_two_period_adjustment,
                 payment_adjustment=self.leg_two_payment_adjustment,
+                payment_lag=self.leg_two_payment_lag,
+                fixing_lag=self.leg_two_fixing_lag,
+                calendar=self.calendar,
             )
 
 

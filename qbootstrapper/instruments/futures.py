@@ -54,7 +54,9 @@ class FuturesInstrumentByDates(Instrument):
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, effective, maturity, price, curve, basis="act360", calendar=None):
+    def __init__(
+        self, effective, maturity, price, curve, basis="act360", calendar=None
+    ):
         # assignments
         self.effective = effective
         self.maturity = maturity
