@@ -217,4 +217,4 @@ def imm_date(imm_code):
     if third.weekday() == 2:
         return third
     else:
-        return third.replace(day=(15 + (4 - third.weekday()) % 7))
+        return third.replace(day=(15 + (2 - third.weekday()) % 7))

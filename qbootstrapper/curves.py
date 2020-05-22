@@ -113,8 +113,13 @@ class Curve(object):
                         discount_factor,
                     )
                 ],
-                dtype=self.curve.dtype,
+                dtype=[
+                    ("maturity", "datetime64[D]"),
+                    ("timestamp", np.float64),
+                    ("discount_factor", np.float64),
+                ],
             )
+
             self.curve = np.append(self.curve, array)
 
         self._built = True

@@ -73,10 +73,11 @@ class FuturesInstrumentByDates(Instrument):
     def discount_factor(self):
         """Method for returning the discount factor for a future
         """
-        discount_factor = self.curve.discount_factor(self.effective) / (
+        df = self.curve.discount_factor(self.effective) / (
             1 + (self.rate * self.accrual_period)
         )
-        return np.log(discount_factor)
+
+        return np.log(df)
 
 
 class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
@@ -124,7 +125,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.calendar = calendar if calendar is not None else Calendar("weekends")
 
         self.effective = imm_date(code)
-        self.maturity = self.effective + self.tenor
+        self.maturity = self.calendar.adjust(self.effective + self.tenor, "following")
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )

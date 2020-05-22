@@ -88,9 +88,13 @@ class LIBORInstrument(Instrument):
         """Method for setting the accrual period and dates for a Cash
         instrument
         """
-        self.maturity = self.calendar.advance(
-            self.effective, self.tenor, self.payment_adjustment
-        )
+        if type(self.tenor) == Tenor:
+            self.maturity = self.calendar.advance(
+                self.effective, self.tenor, self.payment_adjustment
+            )
+        else:
+            self.maturity = self.tenor
+
         self.payment_date = self.calendar.adjust(self.maturity, self.payment_adjustment)
 
     def discount_factor(self):

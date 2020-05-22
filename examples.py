@@ -21,8 +21,8 @@ fedfunds_conventions = {
 }
 
 fedfunds_swap_conventions = {
-    "fixed_tenor": qb.Tenor("6M"),
-    "float_tenor": qb.Tenor("3M"),
+    "fixed_tenor": qb.Tenor("1Y"),
+    "float_tenor": qb.Tenor("1Y"),
     "fixed_basis": "act360",
     "float_basis": "act360",
     "fixed_period_adjustment": "following",
@@ -54,10 +54,29 @@ usdlibor_swap_conventions = {
     "float_period_adjustment": "following",
     "fixed_payment_adjustment": "following",
     "float_payment_adjustment": "following",
-    "fixed_payment_lag": qb.Tenor("2D"),
-    "float_payment_lag": qb.Tenor("2D"),
+    "fixed_payment_lag": qb.Tenor("0D"),
+    "float_payment_lag": qb.Tenor("0D"),
     "rate_tenor": qb.Tenor("3M"),
     "calendar": qb.Calendar("FRB", "NEWYORK"),
+}
+
+fedfunds_libor_conventions = {
+    "leg_one_basis": "act360",
+    "leg_two_basis": "act360",
+    "leg_one_tenor": qb.Tenor("3M"),
+    "leg_two_tenor": qb.Tenor("3M"),
+    "leg_one_period_adjustment": "following",
+    "leg_two_period_adjustment": "following",
+    "leg_one_payment_adjustment": "following",
+    "leg_two_payment_adjustment": "following",
+    "leg_one_payment_lag": qb.Tenor("2D"),
+    "leg_two_payment_lag": qb.Tenor("2D"),
+    "calendar": qb.Calendar("FRB", "NEWYORK"),
+    "leg_two_fixing_lag": qb.Tenor("2D"),
+    "leg_one_rate_tenor": qb.Tenor("ON"),
+    "leg_one_rate_basis": "act360",
+    "leg_two_rate_tenor": qb.Tenor("3M"),
+    "leg_two_rate_basis": "act360",
 }
 
 fedfunds_instruments = [
@@ -93,6 +112,10 @@ fedfunds_instruments = [
 ]
 
 usdlibor_instruments = [
+    # This fixes the short end of the USD LIBOR curve. It's very unclear to
+    # me how numerix comes up with this number. Its higher than 3M LIBOR, but
+    # expires earlier, which seems... unlikely?
+    # (datetime.datetime(2020, 3, 18), 0.0192704, "CASH", usdlibor_conventions),
     (qb.Tenor("3M"), 0.0190838, "CASH", usdlibor_conventions),
     ("H20", 98.26531667, "FUTURES", usdlibor_futures_conventions),
     ("M20", 98.31094247, "FUTURES", usdlibor_futures_conventions),
@@ -134,18 +157,18 @@ fedfunds_libor_instruments = [
     (qb.Tenor("30Y"), 0.002213, "OIS-LIBOR-SWAP", {}),
 ]
 
-curve_effective = datetime.datetime(2019, 12, 31)
-effective = datetime.datetime(2020, 1, 3)
+curve_date = datetime.datetime(2019, 12, 31)
+effective = qb.Calendar("NEWYORK").adjust(curve_date + qb.Tenor("3D"), "following")
 
 # Curves
-fedfunds = qb.Curve(curve_effective)
-usdlibor = qb.LIBORCurve(curve_effective, discount_curve=fedfunds)
+fedfunds = qb.Curve(curve_date)
+usdlibor = qb.LIBORCurve(curve_date, discount_curve=fedfunds)
 
 # Fed funds build
 for (tenor, rate, kind, convention) in fedfunds_instruments:
     if kind.upper() == "CASH":
         inst = qb.instruments.LIBORInstrument(
-            curve_effective, rate, tenor, fedfunds, **convention
+            curve_date, rate, tenor, fedfunds, **convention
         )
     elif kind.upper() == "SWAP":
         inst = qb.OISSwapInstrument(effective, tenor, rate, fedfunds, **convention)
@@ -170,11 +193,11 @@ for (tenor, rate, kind, convention) in usdlibor_instruments:
 
 # Simultaneous stripped LIBOR and OIS curves
 # Short FedFunds curve
-fedfunds_short = qb.Curve(curve_effective)
-for (tenor, rate, kind, convention) in fedfunds_instruments[:17]:
+fedfunds_short = qb.Curve(curve_date)
+for (tenor, rate, kind, convention) in fedfunds_instruments:
     if kind.upper() == "CASH":
         inst = qb.instruments.LIBORInstrument(
-            curve_effective, rate, tenor, fedfunds_short, **convention
+            curve_date, rate, tenor, fedfunds_short, **convention
         )
     elif kind.upper() == "SWAP":
         inst = qb.OISSwapInstrument(
@@ -183,11 +206,14 @@ for (tenor, rate, kind, convention) in fedfunds_instruments[:17]:
     else:
         raise Exception("Instrument type {} not recognized".format(kind))
 
+    if inst.maturity >= (curve_date + fedfunds_libor_instruments[0][0]):
+        break
+
     fedfunds_short.add_instrument(inst)
 
 # Short USD LIBOR curve
-usdlibor_short = qb.LIBORCurve(curve_effective, discount_curve=fedfunds_short)
-for (tenor, rate, kind, convention) in usdlibor_instruments[:15]:
+usdlibor_short = qb.LIBORCurve(curve_date, discount_curve=fedfunds_short)
+for (tenor, rate, kind, convention) in usdlibor_instruments:
     if kind.upper() == "CASH":
         inst = qb.LIBORInstrument(effective, rate, tenor, usdlibor_short, **convention)
     elif kind.upper() == "FUTURES":
@@ -199,11 +225,14 @@ for (tenor, rate, kind, convention) in usdlibor_instruments[:15]:
     else:
         raise Exception("Instrument type {} not recognized".format(kind))
 
+    if inst.maturity >= (curve_date + fedfunds_libor_instruments[0][0]):
+        break
+
     usdlibor_short.add_instrument(inst)
 
 # Simultaneous curve instruments
 fedfunds_libor = qb.SimultaneousStrippedCurve(
-    curve_effective, fedfunds_short, usdlibor_short
+    curve_date, fedfunds_short, usdlibor_short
 )
 
 for (tenor, rate, kind, convention) in fedfunds_libor_instruments:
@@ -217,18 +246,25 @@ for (tenor, rate, kind, convention) in fedfunds_libor_instruments:
                     break
             except AttributeError:
                 pass
+        else:
+            continue
 
         ois_inst = qb.AverageIndexBasisSwapInstrument(
-            effective, tenor, fedfunds_libor, leg_one_spread=rate, **convention
+            effective,
+            tenor,
+            fedfunds_libor,
+            leg_one_spread=rate,
+            **fedfunds_libor_conventions
         )
 
         libor_inst = qb.LIBORSwapInstrument(
-            effective, tenor, ibor_rate, fedfunds_libor, **usdlibor_swap_conventions
+            effective, tenor, ibor_rate, usdlibor, **usdlibor_swap_conventions
         )
 
         instrument_pair = qb.SimultaneousInstrument(
             ois_inst, libor_inst, fedfunds_libor
         )
+
         fedfunds_libor.add_instrument(instrument_pair)
 
     else:
@@ -247,12 +283,10 @@ def load_curve(filename):
                 dfs.append(np.log(float(df)))
                 dates.append(
                     time.mktime(
-                        (
-                            curve_effective + datetime.timedelta(days=int(serial))
-                        ).timetuple()
+                        (curve_date + datetime.timedelta(days=int(serial))).timetuple()
                     )
                 )
-            except:
+            except: # noqa
                 pass
 
     return scipy.interpolate.PchipInterpolator(np.array(dates), np.array(dfs))

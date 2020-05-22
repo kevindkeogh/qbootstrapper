@@ -324,8 +324,16 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
             np.array(
                 [
                     (
-                        np.datetime64(self.maturity.strftime("%Y-%m-%d")),
-                        time.mktime(self.maturity.timetuple()),
+                        np.datetime64(
+                            self.leg_one_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.leg_one_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
                         ois_guess,
                     )
                 ],
@@ -342,8 +350,16 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
             np.array(
                 [
                     (
-                        np.datetime64(self.maturity.strftime("%Y-%m-%d")),
-                        time.mktime(self.maturity.timetuple()),
+                        np.datetime64(
+                            self.leg_two_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.leg_two_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
                         libor_guess,
                     )
                 ],
@@ -413,7 +429,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         return abs(ois_leg - libor_leg)
 
     def __ois_forward_rate(self, interpolator, period):
-        """
+        """Calculate OIS forward rate for a period
         """
         start_date = period["accrual_start"].astype("<M8[s]")
         end_date = period["accrual_end"].astype("<M8[s]")
