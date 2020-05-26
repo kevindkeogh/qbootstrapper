@@ -176,9 +176,6 @@ class OISSwapInstrument(SwapInstrument):
 
         for period in self.float_schedule.periods:
             forward_rate = self.__forward_rate(interpolator, period)
-            accrual_period = super(OISSwapInstrument, self).daycount(
-                period["accrual_start"], period["accrual_end"], self.float_basis
-            )
             period["cashflow"] = forward_rate * self.notional
 
         payment_dates = self.float_schedule.periods["payment_date"].astype("<M8[s]")

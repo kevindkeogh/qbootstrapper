@@ -450,3 +450,153 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         rates = ((initial_dfs / end_dfs) - 1) * 360
         rate = rates.mean()
         return rate
+
+
+class CompoundIndexBasisSwap(BasisSwapInstrument):
+    """Note that leg_one must be the SOFR curve, and leg_two must be the OIS
+    curve
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(CompoundIndexBasisSwap, self).__init__(*args, **kwargs)
+        self.instrument_type = "compound_index_basis_swap"
+
+    def discount_factor(self):
+        """Returns the natural log of each of the OIS and LIBOR discount factors
+        for the swap using the Levenberg-Marquardt method.
+
+        Note that the first guess is the OIS discount factor, the second guess
+        is the LIBOR discount factor
+        """
+        raise NotImplementedError
+
+    def _swap_value(self, guesses):
+        """
+        Note that this approach should only be used for a
+        SimultaneousStrippedCurve
+
+        TODO: Seperate cases for when self.curve.curve_type ==
+        'Simultaneous_curve' and when not
+        """
+        sofr_guess = guesses[0]
+        ois_guess = guesses[1]
+
+        # SOFR curve
+        discount_curve = np.append(
+            self.curve.discount_curve.curve,
+            np.array(
+                [
+                    (
+                        np.datetime64(
+                            self.leg_one_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.leg_one_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
+                        sofr_guess,
+                    )
+                ],
+                dtype=self.curve.discount_curve.curve.dtype,
+            ),
+        )
+
+        leg_one_interpolator = scipy.interpolate.PchipInterpolator(
+            discount_curve["timestamp"], discount_curve["discount_factor"]
+        )
+
+        # OIS curve
+        projection_curve = np.append(
+            self.curve.projection_curve.curve,
+            np.array(
+                [
+                    (
+                        np.datetime64(
+                            self.leg_two_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .strftime("%Y-%m-%d")
+                        ),
+                        time.mktime(
+                            self.leg_two_schedule.periods[-1]["payment_date"]
+                            .astype(object)
+                            .timetuple()
+                        ),
+                        ois_guess,
+                    )
+                ],
+                dtype=self.curve.projection_curve.curve.dtype,
+            ),
+        )
+        leg_two_interpolator = scipy.interpolate.PchipInterpolator(
+            projection_curve["timestamp"], projection_curve["discount_factor"]
+        )
+
+        discount_interpolator = leg_one_interpolator
+
+        # SOFR Leg
+        for period in self.leg_one_schedule.periods:
+            forward_rate = self.__ois_forward_rate(leg_one_interpolator, period)
+            accrual_period = super(AverageIndexBasisSwapInstrument, self).daycount(
+                period["accrual_start"], period["accrual_end"], self.leg_one_basis
+            )
+            period["cashflow"] = (
+                (forward_rate + self.leg_one_spread) * self.notional * accrual_period
+            )
+
+        payment_dates = self.leg_one_schedule.periods["payment_date"].astype("<M8[s]")
+        discount_factors = np.exp(
+            discount_interpolator(payment_dates.astype(np.uint64))
+        )
+        self.leg_one_schedule.periods["PV"] = (
+            self.leg_one_schedule.periods["cashflow"] * discount_factors
+        )
+
+        sofr_leg = self.leg_one_schedule.periods["PV"].sum()
+
+        # OIS Leg
+        for period in self.leg_two_schedule.periods:
+            forward_rate = self.__ois_forward_rate(leg_two_interpolator, period)
+            accrual_period = super(AverageIndexBasisSwapInstrument, self).daycount(
+                period["accrual_start"], period["accrual_end"], self.leg_two_basis
+            )
+            period["cashflow"] = (
+                (forward_rate + self.leg_two_spread) * self.notional * accrual_period
+            )
+
+        payment_dates = self.leg_two_schedule.periods["payment_date"].astype("<M8[s]")
+        discount_factors = np.exp(
+            discount_interpolator(payment_dates.astype(np.uint64))
+        )
+        self.leg_two_schedule.periods["PV"] = (
+            self.leg_two_schedule.periods["cashflow"] * discount_factors
+        )
+
+        ois_leg = self.leg_two_schedule.periods["PV"].sum()
+
+        return sofr_leg - ois_leg
+
+    def __ois_forward_rate(self, interpolator, period):
+        """Calculate OIS forward rate for a period
+        """
+        start_date = period["accrual_start"].astype("<M8[s]")
+        end_date = period["accrual_end"].astype("<M8[s]")
+        one_day = np.timedelta64(1, "D")
+        start_day = start_date.astype(object).weekday()
+        first_dates = np.arange(start_date, end_date, one_day)
+        # replace all Saturdays and Sundays with Fridays
+        fridays = first_dates[4 - start_day :: 7]
+        first_dates[5 - start_day :: 7] = fridays[
+            : len(first_dates[5 - start_day :: 7])
+        ]
+        first_dates[6 - start_day :: 7] = fridays[
+            : len(first_dates[6 - start_day :: 7])
+        ]
+        second_dates = first_dates + one_day
+        initial_dfs = np.exp(interpolator(first_dates))
+        end_dfs = np.exp(interpolator(second_dates))
+        rates = initial_dfs / end_dfs
+        rate = rates.prod() - 1
+        return rate

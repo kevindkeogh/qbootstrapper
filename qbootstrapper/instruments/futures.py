@@ -12,7 +12,9 @@ discount factors for swaps are calculated using a root-finding algorithm.
 # python libraries
 from __future__ import division
 import numpy as np
+import scipy
 import sys
+import time
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
@@ -130,3 +132,136 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
             self.effective, self.maturity, self.basis
         )
         self.instrument_type = "futures"
+
+
+class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
+    """Futures instrument class for use with Swap Curve bootstrapper.
+
+    This class can be utilized to hold the market data and conventions
+    for a single Futures contract, which is later utilized in when the
+    .build() method is called on the curve where this instrument
+    has been added.
+
+    The future rate is calculated as the
+
+                         DF[effective]
+                         -------------
+    1 + ((100 - price) / 100 * accrual_days / days_in_year)
+
+    Arguments:
+        code (string)           : IMM Code of the future (e.g., H20)
+        price (float)           : Price of the future (assumes expiry price
+                                  of the future is 100)
+        curve (Curve)           : Curve being built, necessary for callbacks
+                                  to the curve for discount factors
+        base_curve (Curve)      : Base curve to calculate the OIS-SOFR spread
+
+        kwargs
+        ------
+        basis (str)             : Accrual basis for the period
+                                  [default: act360]
+        tenor (Tenor)           : Tenor of the the future
+                                  [default: 3M]
+        calendar (Calendar)     : Calendar used for payment date adjustment
+                                  [default: weekends]
+        contract_size (float)   : Notional used for calculating cashflows
+                                  [default: 100]
+
+
+    TODO: Add Futures convexity calculation
+    """
+
+    def __init__(
+        self,
+        code,
+        spread,
+        curve,
+        base_curve,
+        basis="act360",
+        calendar=None,
+        tenor=None,
+        contract_size=100,
+    ):
+        # assignments
+        self.code = code
+        self.spread = spread
+        self.curve = curve
+        self.base_curve = base_curve
+        self.basis = basis
+        self.tenor = tenor if tenor is not None else Tenor("3M")
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.contract_size = contract_size
+
+        self.effective = imm_date(code)
+        self.maturity = self.calendar.adjust(self.effective + self.tenor, "following")
+        self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
+            self.effective, self.maturity, self.basis
+        )
+        self.instrument_type = "futures"
+
+    def discount_factor(self):
+        """Returns the discount factor for the futures using Newton's method
+        root finder.
+        """
+        return scipy.optimize.newton(self._futures_value, 0)
+
+    def _futures_value(self, guess, args=()):
+        """
+        """
+        if not isinstance(guess, (int, float, long, complex)):
+            # simultaneous bootstrapping sets the guess[0] as the ois guess
+            guess = guess[0]
+
+        temp_curve = self.curve.curve
+        temp_curve = np.append(
+            self.curve.curve,
+            np.array(
+                [
+                    (
+                        np.datetime64(self.maturity.strftime("%Y-%m-%d")),
+                        time.mktime(self.maturity.timetuple()),
+                        guess,
+                    )
+                ],
+                dtype=self.curve.curve.dtype,
+            ),
+        )
+
+        interpolator = scipy.interpolate.PchipInterpolator(
+            temp_curve["timestamp"], temp_curve["discount_factor"]
+        )
+
+        # OIS Leg
+        ois_forward_rate = self.__forward_rate(self.base_curve.log_discount_factor)
+        ois_cashflow = ois_forward_rate * self.contract_size
+        ois_df = np.exp(self.base_curve.log_discount_factor(self.maturity))
+        ois_pv = ois_cashflow * ois_df
+
+        # SOFR Leg
+        sofr_forward_rate = self.__forward_rate(interpolator)
+        sofr_cashflow = sofr_forward_rate * self.contract_size
+        sofr_pv = sofr_cashflow * ois_df
+
+        return ois_pv - sofr_pv
+
+    def __forward_rate(self, interpolator):
+        """
+        """
+        start_date = np.datetime64(self.effective).astype("<M8[s]")
+        end_date = np.datetime64(self.maturity).astype("<M8[s]")
+        one_day = np.timedelta64(1, "D")
+        start_day = start_date.astype(object).weekday()
+        first_dates = np.arange(start_date, end_date, one_day)
+        fridays = first_dates[4 - start_day :: 7]
+        first_dates[5 - start_day :: 7] = fridays[
+            : len(first_dates[5 - start_day :: 7])
+        ]
+        first_dates[6 - start_day :: 7] = fridays[
+            : len(first_dates[6 - start_day :: 7])
+        ]
+        second_dates = first_dates + one_day
+        initial_dfs = np.exp(interpolator(first_dates))
+        end_dfs = np.exp(interpolator(second_dates))
+        rates = initial_dfs / end_dfs
+        rate = rates.prod() - 1
+        return rate

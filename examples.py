@@ -61,6 +61,8 @@ usdlibor_swap_conventions = {
 }
 
 fedfunds_libor_conventions = {
+    # leg_one == OIS
+    # leg_two == LIBOR
     "leg_one_basis": "act360",
     "leg_two_basis": "act360",
     "leg_one_tenor": qb.Tenor("3M"),
@@ -71,12 +73,43 @@ fedfunds_libor_conventions = {
     "leg_two_payment_adjustment": "following",
     "leg_one_payment_lag": qb.Tenor("2D"),
     "leg_two_payment_lag": qb.Tenor("2D"),
-    "calendar": qb.Calendar("FRB", "NEWYORK"),
     "leg_two_fixing_lag": qb.Tenor("2D"),
     "leg_one_rate_tenor": qb.Tenor("ON"),
     "leg_one_rate_basis": "act360",
     "leg_two_rate_tenor": qb.Tenor("3M"),
     "leg_two_rate_basis": "act360",
+    "calendar": qb.Calendar("FRB", "NEWYORK"),
+}
+
+sofr_conventions = {
+    "payment_adjustment": "following",
+    "calendar": qb.Calendar("FRB"),
+}
+
+sofr_futures_conventions = {
+    "tenor": qb.Tenor("3M"),
+    "basis": "act360",
+    "calendar": qb.Calendar("FRB", "NEWYORK"),
+}
+
+sofr_fedfunds_conventions = {
+    # leg_one == SOFR
+    # leg_two == OIS
+    "leg_one_basis": "act360",
+    "leg_two_basis": "act360",
+    "leg_one_tenor": qb.Tenor("3M"),
+    "leg_two_tenor": qb.Tenor("3M"),
+    "leg_one_period_adjustment": "following",
+    "leg_two_period_adjustment": "following",
+    "leg_one_payment_adjustment": "following",
+    "leg_two_payment_adjustment": "following",
+    "leg_one_payment_lag": qb.Tenor("2D"),
+    "leg_two_payment_lag": qb.Tenor("2D"),
+    "leg_one_rate_tenor": qb.Tenor("ON"),
+    "leg_one_rate_basis": "act360",
+    "leg_two_rate_tenor": qb.Tenor("ON"),
+    "leg_two_rate_basis": "act360",
+    "calendar": qb.Calendar("FRB"),
 }
 
 fedfunds_instruments = [
@@ -155,6 +188,20 @@ fedfunds_libor_instruments = [
     (qb.Tenor("20Y"), 0.002213, "OIS-LIBOR-SWAP", {}),
     (qb.Tenor("25Y"), 0.002213, "OIS-LIBOR-SWAP", {}),
     (qb.Tenor("30Y"), 0.002213, "OIS-LIBOR-SWAP", {}),
+]
+
+sofr_fedfunds_instruments = [
+    (qb.Tenor("ON"), 0.0155, "CASH", sofr_conventions),
+    ("Z19", 98.44, "FUTURES", sofr_futures_conventions),
+    ("H20", 98.455, "FUTURES", sofr_futures_conventions),
+    ("M20", 98.495, "FUTURES", sofr_futures_conventions),
+    ("U20", 98.560, "FUTURES", sofr_futures_conventions),
+    ("Z20", 98.610, "FUTURES", sofr_futures_conventions),
+    ("H21", 98.625, "FUTURES", sofr_futures_conventions),
+    (qb.Tenor("2Y"), -0.0002542, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
+    (qb.Tenor("3Y"), -0.0001957, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
+    (qb.Tenor("4Y"), -0.0002566, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
+    (qb.Tenor("5Y"), -0.0002387, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
 ]
 
 curve_date = datetime.datetime(2019, 12, 31)
@@ -286,7 +333,7 @@ def load_curve(filename):
                         (curve_date + datetime.timedelta(days=int(serial))).timetuple()
                     )
                 )
-            except: # noqa
+            except:  # noqa
                 pass
 
     return scipy.interpolate.PchipInterpolator(np.array(dates), np.array(dfs))
