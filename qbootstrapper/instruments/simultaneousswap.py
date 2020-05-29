@@ -28,16 +28,11 @@ class SimultaneousInstrument(Instrument):
     """
 
     def __init__(
-        self,
-        discount_instrument,
-        projection_instrument,
-        curve,
-        method="SLSQP",
-        disp=False,
+        self, instrument_one, instrument_two, curve, method="SLSQP", disp=False,
     ):
 
-        self.discount_instrument = discount_instrument
-        self.projection_instrument = projection_instrument
+        self.instrument_one = instrument_one
+        self.instrument_two = instrument_two
         self.method = method
         self.disp = disp
         self.instrument_type = "simultaneous_instrument"
@@ -59,6 +54,6 @@ class SimultaneousInstrument(Instrument):
     def _swap_value(self, guesses):
         """
         """
-        discount_value = self.discount_instrument._swap_value(guesses)
-        projection_value = self.projection_instrument._swap_value(guesses)
-        return max(abs(discount_value), abs(projection_value))
+        inst_one_pv = self.instrument_one._swap_value(guesses)
+        inst_two_pv = self.instrument_two._swap_value(guesses)
+        return max(abs(inst_one_pv), abs(inst_two_pv))

@@ -224,8 +224,9 @@ class SimultaneousStrippedCurve(Curve):
     def __init__(
         self,
         effective_date,
+        curve_one,
+        curve_two,
         discount_curve,
-        projection_curve,
         projection_discount_curve=False,
         allow_extrapolation=True,
     ):
@@ -240,31 +241,27 @@ class SimultaneousStrippedCurve(Curve):
             raise TypeError("Allow_extrapolation must be of type 'bool'")
 
         self.curve_type = "Simultaneous_curve"
-        self.discount_curve = copy.deepcopy(discount_curve)
-        for inst in self.discount_curve.instruments:
-            inst.curve = self.discount_curve
+        self.curve_one = copy.deepcopy(curve_one)
+        for inst in self.curve_one.instruments:
+            inst.curve = self.curve_one
 
-        self.projection_curve = copy.deepcopy(projection_curve)
-        for inst in self.projection_curve.instruments:
-            inst.curve = self.projection_curve
+        self.curve_two = copy.deepcopy(curve_two)
+        for inst in self.curve_two.instruments:
+            inst.curve = self.curve_two
 
-        self.projection_curve.discount_curve = self.discount_curve
+        if id(discount_curve) == id(curve_one):
+            self.discount_curve = self.curve_one
+        elif id(discount_curve) == id(curve_two):
+            self.discount_curve = self.curve_two
+        else:
+            self.discount_curve = copy.deepcopy(discount_curve)
 
-        self.projection_discount_curve = copy.deepcopy(projection_discount_curve)
+        self.curve_one.discount_curve = self.discount_curve
+
+        self.curve_two.discount_curve = self.discount_curve
         self.instruments = []
         self._built = False
         self.allow_extrapolation = allow_extrapolation
-
-    def add_instrument(self, instrument):
-        """Needs special because the discount_curve and projection curve
-        are deep copied when the curve is created
-        """
-        if isinstance(instrument, instruments.Instrument):
-            self._built = False
-            instrument.projection_instrument.curve = self.projection_curve
-            self.instruments.append(instrument)
-        else:
-            raise TypeError("Instruments must be a of type Instrument")
 
     def build(self):
         """Build the underlying curves as much as possible, then build each of
@@ -274,8 +271,8 @@ class SimultaneousStrippedCurve(Curve):
         last, and the first simultaneous instrument must be after the last
         instrument in each of the projection and discount curves.
         """
-        self.discount_curve.build()
-        self.projection_curve.build()
+        self.curve_one.build()
+        self.curve_two.build()
 
         # TODO figure out some way of sorting these things
         # self.instruments.sort(key=operator.attrgetter('maturity'))
@@ -286,55 +283,67 @@ class SimultaneousStrippedCurve(Curve):
             if df.success:
                 leg_one_df, leg_two_df = df.x
 
-                array = np.array(
-                    [
-                        (
-                            np.datetime64(
-                                instrument.discount_instrument.leg_two_schedule.periods[
-                                    -1
-                                ]["payment_date"]
-                                .astype(object)
-                                .strftime("%Y-%m-%d")
-                            ),
-                            time.mktime(
-                                instrument.discount_instrument.leg_two_schedule.periods[
-                                    -1
-                                ]["payment_date"]
-                                .astype(object)
-                                .timetuple()
-                            ),
-                            leg_one_df,
+                last_date = None
+                for attr in [
+                    "leg_one_schedule",
+                    "leg_two_schedule",
+                    "fixed_schedule",
+                    "float_schedule",
+                ]:
+                    if hasattr(instrument.instrument_one, attr):
+                        maybe = (
+                            getattr(instrument.instrument_one, attr)
+                            .periods[-1]["payment_date"]
+                            .astype(object)
                         )
-                    ],
-                    dtype=self.discount_curve.curve.dtype,
-                )
-                self.discount_curve.curve = np.append(self.discount_curve.curve, array)
+                        if last_date is None:
+                            last_date = maybe
+                        elif maybe > last_date:
+                            last_date = maybe
 
                 array = np.array(
                     [
                         (
-                            np.datetime64(
-                                instrument.projection_instrument.fixed_schedule.periods[
-                                    -1
-                                ]["payment_date"]
-                                .astype(object)
-                                .strftime("%Y-%m-%d")
-                            ),
-                            time.mktime(
-                                instrument.projection_instrument.fixed_schedule.periods[
-                                    -1
-                                ]["payment_date"]
-                                .astype(object)
-                                .timetuple()
-                            ),
+                            np.datetime64(last_date.strftime("%Y-%m-%d")),
+                            time.mktime(last_date.timetuple()),
+                            leg_one_df,
+                        )
+                    ],
+                    dtype=self.curve_one.curve.dtype,
+                )
+                self.curve_one.curve = np.append(self.curve_one.curve, array)
+
+                last_date = None
+                for attr in [
+                    "leg_one_schedule",
+                    "leg_two_schedule",
+                    "fixed_schedule",
+                    "float_schedule",
+                ]:
+                    if hasattr(instrument.instrument_two, attr):
+                        maybe = (
+                            getattr(instrument.instrument_two, attr)
+                            .periods[-1]["payment_date"]
+                            .astype(object)
+                        )
+                        if last_date is None:
+                            last_date = maybe
+                        elif maybe > last_date:
+                            last_date = maybe
+
+                array = np.array(
+                    [
+                        (
+                            np.datetime64(last_date.strftime("%Y-%m-%d")),
+                            time.mktime(last_date.timetuple()),
                             leg_two_df,
                         )
                     ],
-                    dtype=self.projection_curve.curve.dtype,
+                    dtype=self.curve_two.curve.dtype,
                 )
-                self.projection_curve.curve = np.append(
-                    self.projection_curve.curve, array
-                )
+                self.curve_two.curve = np.append(self.curve_two.curve, array)
+            else:
+                print("Failed to bootstrap instrument")
 
         self._built = True
 

@@ -134,7 +134,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.instrument_type = "futures"
 
 
-class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
+class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
     """Futures instrument class for use with Swap Curve bootstrapper.
 
     This class can be utilized to hold the market data and conventions
@@ -154,7 +154,6 @@ class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
                                   of the future is 100)
         curve (Curve)           : Curve being built, necessary for callbacks
                                   to the curve for discount factors
-        base_curve (Curve)      : Base curve to calculate the OIS-SOFR spread
 
         kwargs
         ------
@@ -174,9 +173,8 @@ class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
     def __init__(
         self,
         code,
-        spread,
+        price,
         curve,
-        base_curve,
         basis="act360",
         calendar=None,
         tenor=None,
@@ -184,9 +182,9 @@ class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
     ):
         # assignments
         self.code = code
-        self.spread = spread
+        self.price = price
+        self.rate = (100 - price) / 100
         self.curve = curve
-        self.base_curve = base_curve
         self.basis = basis
         self.tenor = tenor if tenor is not None else Tenor("3M")
         self.calendar = calendar if calendar is not None else Calendar("weekends")
@@ -231,18 +229,14 @@ class CompoundSpreadFuturesByIMMCode(FuturesInstrumentByIMMCode):
             temp_curve["timestamp"], temp_curve["discount_factor"]
         )
 
-        # OIS Leg
-        ois_forward_rate = self.__forward_rate(self.base_curve.log_discount_factor)
-        ois_cashflow = ois_forward_rate * self.contract_size
-        ois_df = np.exp(self.base_curve.log_discount_factor(self.maturity))
-        ois_pv = ois_cashflow * ois_df
-
         # SOFR Leg
+        df = np.exp(interpolator(np.datetime64(self.maturity).astype("<M8[s]")))
         sofr_forward_rate = self.__forward_rate(interpolator)
-        sofr_cashflow = sofr_forward_rate * self.contract_size
-        sofr_pv = sofr_cashflow * ois_df
+        sofr_pv = sofr_forward_rate * self.contract_size * df
 
-        return ois_pv - sofr_pv
+        futures_pv = self.rate * self.contract_size * self.accrual_period * df
+
+        return sofr_pv - futures_pv
 
     def __forward_rate(self, interpolator):
         """

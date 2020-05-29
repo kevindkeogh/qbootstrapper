@@ -190,14 +190,18 @@ fedfunds_libor_instruments = [
     (qb.Tenor("30Y"), 0.002213, "OIS-LIBOR-SWAP", {}),
 ]
 
-sofr_fedfunds_instruments = [
+sofr_instruments = [
     (qb.Tenor("ON"), 0.0155, "CASH", sofr_conventions),
-    ("Z19", 98.44, "FUTURES", sofr_futures_conventions),
-    ("H20", 98.455, "FUTURES", sofr_futures_conventions),
-    ("M20", 98.495, "FUTURES", sofr_futures_conventions),
-    ("U20", 98.560, "FUTURES", sofr_futures_conventions),
-    ("Z20", 98.610, "FUTURES", sofr_futures_conventions),
-    ("H21", 98.625, "FUTURES", sofr_futures_conventions),
+    # Some of these happened in the past, so need to add fixings
+    # ("Z19", 98.44, "COMPOUND-FUTURES", sofr_futures_conventions),
+    ("H20", 98.455, "COMPOUND-FUTURES", sofr_futures_conventions),
+    ("M20", 98.495, "COMPOUND-FUTURES", sofr_futures_conventions),
+    ("U20", 98.560, "COMPOUND-FUTURES", sofr_futures_conventions),
+    ("Z20", 98.610, "COMPOUND-FUTURES", sofr_futures_conventions),
+    ("H21", 98.625, "COMPOUND-FUTURES", sofr_futures_conventions),
+]
+
+sofr_fedfunds_instruments = [
     (qb.Tenor("2Y"), -0.0002542, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
     (qb.Tenor("3Y"), -0.0001957, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
     (qb.Tenor("4Y"), -0.0002566, "SOFR-OIS-SWAP", sofr_fedfunds_conventions),
@@ -279,7 +283,7 @@ for (tenor, rate, kind, convention) in usdlibor_instruments:
 
 # Simultaneous curve instruments
 fedfunds_libor = qb.SimultaneousStrippedCurve(
-    curve_date, fedfunds_short, usdlibor_short
+    curve_date, fedfunds_short, usdlibor_short, fedfunds_short
 )
 
 for (tenor, rate, kind, convention) in fedfunds_libor_instruments:
@@ -301,11 +305,11 @@ for (tenor, rate, kind, convention) in fedfunds_libor_instruments:
             tenor,
             fedfunds_libor,
             leg_one_spread=rate,
-            **fedfunds_libor_conventions
+            **fedfunds_libor_conventions,
         )
 
         libor_inst = qb.LIBORSwapInstrument(
-            effective, tenor, ibor_rate, usdlibor, **usdlibor_swap_conventions
+            effective, tenor, ibor_rate, fedfunds_libor, **usdlibor_swap_conventions
         )
 
         instrument_pair = qb.SimultaneousInstrument(
@@ -313,6 +317,77 @@ for (tenor, rate, kind, convention) in fedfunds_libor_instruments:
         )
 
         fedfunds_libor.add_instrument(instrument_pair)
+
+    else:
+        raise Exception("Instrument type {} not recognized".format(kind))
+
+# Simultaneous stripped OIS and SOFR curves
+# Short FedFunds curve
+fedfunds_sofr_short = qb.Curve(curve_date)
+for (tenor, rate, kind, convention) in fedfunds_instruments:
+    if kind.upper() == "CASH":
+        inst = qb.instruments.LIBORInstrument(
+            curve_date, rate, tenor, fedfunds_sofr_short, **convention
+        )
+    elif kind.upper() == "SWAP":
+        inst = qb.OISSwapInstrument(
+            effective, tenor, rate, fedfunds_sofr_short, **convention
+        )
+    else:
+        raise Exception("Instrument type {} not recognized".format(kind))
+
+    if inst.maturity >= (curve_date + sofr_fedfunds_instruments[0][0]):
+        break
+
+    fedfunds_sofr_short.add_instrument(inst)
+
+# Short SOFR curve
+sofr_short = qb.Curve(curve_date)  # , discount_curve=fedfunds_sofr_short)
+for (tenor, rate, kind, convention) in sofr_instruments:
+    if kind.upper() == "CASH":
+        inst = qb.LIBORInstrument(effective, rate, tenor, sofr_short, **convention)
+    elif kind.upper() == "COMPOUND-FUTURES":
+        inst = qb.CompoundFuturesInstrumentByIMMCode(
+            tenor, rate, sofr_short, **convention
+        )
+    else:
+        raise Exception("Instrument type {} not recognized".format(kind))
+
+    if inst.maturity >= (curve_date + sofr_fedfunds_instruments[0][0]):
+        break
+
+    sofr_short.add_instrument(inst)
+
+# Simultaneous curve instruments
+sofr_fedfunds = qb.SimultaneousStrippedCurve(
+    curve_date, sofr_short, fedfunds_sofr_short, fedfunds_sofr_short
+)
+
+for (tenor, rate, kind, convention) in sofr_fedfunds_instruments:
+    if kind.upper() == "SOFR-OIS-SWAP":
+        ois_rate = None
+
+        for idx, inst in enumerate(fedfunds_instruments):
+            try:
+                if inst[0].name == tenor.name:
+                    ois_rate = inst[1]
+                    break
+            except AttributeError:
+                pass
+        else:
+            continue
+
+        sofr_inst = qb.CompoundIndexBasisSwapInstrument(
+            effective, tenor, sofr_fedfunds, leg_one_spread=rate, **convention,
+        )
+
+        ois_inst = qb.OISSwapInstrument(
+            effective, tenor, ois_rate, fedfunds_sofr_short, **fedfunds_swap_conventions
+        )
+
+        instrument_pair = qb.SimultaneousInstrument(sofr_inst, ois_inst, sofr_fedfunds)
+
+        sofr_fedfunds.add_instrument(instrument_pair)
 
     else:
         raise Exception("Instrument type {} not recognized".format(kind))
@@ -376,6 +451,7 @@ def main():
 
     dvc_ois = load_curve("/home/kevindkeogh/Downloads/OIS123119USD.crv")
     dvc_3ml = load_curve("/home/kevindkeogh/Downloads/3MLOIS123119USD.crv")
+    dvc_sofr = load_curve("/home/kevindkeogh/Downloads/SOF123119USD.crv")
 
     print("")
     print("Independently bootstrapped")
@@ -387,14 +463,23 @@ def main():
     usdlibor.build()
     compare_curves(dvc_3ml, usdlibor)
     print("")
-    print("Simultaneously bootstrapped")
+    print("Simultaneously bootstrapped OIS-LIBOR")
     fedfunds_libor.build()
     print("")
     print("    FedFunds")
-    compare_curves(dvc_ois, fedfunds_libor.discount_curve)
+    compare_curves(dvc_ois, fedfunds_libor.curve_one)
     print("")
     print("    3M LIBOR")
-    compare_curves(dvc_3ml, fedfunds_libor.projection_curve)
+    compare_curves(dvc_3ml, fedfunds_libor.curve_two)
+    print("")
+    print("Simultaneously bootstrapped SOFR-OIS")
+    sofr_fedfunds.build()
+    print("")
+    print("    FedFunds")
+    compare_curves(dvc_ois, sofr_fedfunds.curve_two)
+    print("")
+    print("    SOFR")
+    compare_curves(dvc_sofr, sofr_fedfunds.curve_one)
 
 
 if __name__ == "__main__":

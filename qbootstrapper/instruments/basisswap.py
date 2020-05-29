@@ -320,7 +320,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         libor_guess = guesses[1]
 
         discount_curve = np.append(
-            self.curve.discount_curve.curve,
+            self.curve.curve_one.curve,
             np.array(
                 [
                     (
@@ -337,7 +337,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
                         ois_guess,
                     )
                 ],
-                dtype=self.curve.discount_curve.curve.dtype,
+                dtype=self.curve.curve_one.curve.dtype,
             ),
         )
 
@@ -346,7 +346,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         projection_curve = np.append(
-            self.curve.projection_curve.curve,
+            self.curve.curve_two.curve,
             np.array(
                 [
                     (
@@ -363,7 +363,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
                         libor_guess,
                     )
                 ],
-                dtype=self.curve.projection_curve.curve.dtype,
+                dtype=self.curve.curve_two.curve.dtype,
             ),
         )
         leg_two_interpolator = scipy.interpolate.PchipInterpolator(
@@ -452,13 +452,13 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         return rate
 
 
-class CompoundIndexBasisSwap(BasisSwapInstrument):
+class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
     """Note that leg_one must be the SOFR curve, and leg_two must be the OIS
     curve
     """
 
     def __init__(self, *args, **kwargs):
-        super(CompoundIndexBasisSwap, self).__init__(*args, **kwargs)
+        super(CompoundIndexBasisSwapInstrument, self).__init__(*args, **kwargs)
         self.instrument_type = "compound_index_basis_swap"
 
     def discount_factor(self):
@@ -483,7 +483,7 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
 
         # SOFR curve
         discount_curve = np.append(
-            self.curve.discount_curve.curve,
+            self.curve.curve_one.curve,
             np.array(
                 [
                     (
@@ -500,7 +500,7 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
                         sofr_guess,
                     )
                 ],
-                dtype=self.curve.discount_curve.curve.dtype,
+                dtype=self.curve.curve_one.curve.dtype,
             ),
         )
 
@@ -510,7 +510,7 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
 
         # OIS curve
         projection_curve = np.append(
-            self.curve.projection_curve.curve,
+            self.curve.curve_two.curve,
             np.array(
                 [
                     (
@@ -527,19 +527,21 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
                         ois_guess,
                     )
                 ],
-                dtype=self.curve.projection_curve.curve.dtype,
+                dtype=self.curve.curve_two.curve.dtype,
             ),
         )
         leg_two_interpolator = scipy.interpolate.PchipInterpolator(
             projection_curve["timestamp"], projection_curve["discount_factor"]
         )
 
-        discount_interpolator = leg_one_interpolator
+        discount_interpolator = leg_two_interpolator
 
         # SOFR Leg
         for period in self.leg_one_schedule.periods:
-            forward_rate = self.__ois_forward_rate(leg_one_interpolator, period)
-            accrual_period = super(AverageIndexBasisSwapInstrument, self).daycount(
+            forward_rate = self.__ois_forward_rate(
+                leg_one_interpolator, period, self.leg_one_rate_basis
+            )
+            accrual_period = super(CompoundIndexBasisSwapInstrument, self).daycount(
                 period["accrual_start"], period["accrual_end"], self.leg_one_basis
             )
             period["cashflow"] = (
@@ -558,8 +560,10 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
 
         # OIS Leg
         for period in self.leg_two_schedule.periods:
-            forward_rate = self.__ois_forward_rate(leg_two_interpolator, period)
-            accrual_period = super(AverageIndexBasisSwapInstrument, self).daycount(
+            forward_rate = self.__ois_forward_rate(
+                leg_two_interpolator, period, self.leg_two_rate_basis
+            )
+            accrual_period = super(CompoundIndexBasisSwapInstrument, self).daycount(
                 period["accrual_start"], period["accrual_end"], self.leg_two_basis
             )
             period["cashflow"] = (
@@ -578,7 +582,7 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
 
         return sofr_leg - ois_leg
 
-    def __ois_forward_rate(self, interpolator, period):
+    def __ois_forward_rate(self, interpolator, period, rate_basis):
         """Calculate OIS forward rate for a period
         """
         start_date = period["accrual_start"].astype("<M8[s]")
@@ -597,6 +601,9 @@ class CompoundIndexBasisSwap(BasisSwapInstrument):
         second_dates = first_dates + one_day
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
-        rates = initial_dfs / end_dfs
-        rate = rates.prod() - 1
+        accrual_period = super(CompoundIndexBasisSwapInstrument, self).daycount(
+            period["accrual_start"], period["accrual_end"], rate_basis
+        )
+        rates = ((initial_dfs / end_dfs) - 1) / accrual_period
+        rate = (1 + rates).prod() - 1
         return rate

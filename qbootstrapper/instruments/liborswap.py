@@ -152,9 +152,13 @@ class LIBORSwapInstrument(SwapInstrument):
             # simultaneous bootstrapping sets the guess[1] as the libor guess
             guess = guess[1]
 
-        temp_curve = self.curve.curve
+        if hasattr(self.curve, "curve"):
+            temp_curve = self.curve.curve
+        else:  # Simultaneous stripped curve
+            temp_curve = self.curve.curve_two.curve
+
         temp_curve = np.append(
-            self.curve.curve,
+            temp_curve,
             np.array(
                 [
                     (
@@ -171,7 +175,7 @@ class LIBORSwapInstrument(SwapInstrument):
                         guess,
                     )
                 ],
-                dtype=self.curve.curve.dtype,
+                dtype=temp_curve.dtype,
             ),
         )
 
