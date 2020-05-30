@@ -129,7 +129,7 @@ class LIBORSwapInstrument(SwapInstrument):
         """
         return scipy.optimize.newton(self._swap_value, 0)
 
-    def _swap_value(self, guess, args=()):
+    def _swap_value(self, guess, guessidx=1, args=()):
         """Private method used for root finding discount factor
 
         The main function for use with the root-finder. This function returns
@@ -150,7 +150,7 @@ class LIBORSwapInstrument(SwapInstrument):
         """
         if not isinstance(guess, (int, float, long, complex)):
             # simultaneous bootstrapping sets the guess[1] as the libor guess
-            guess = guess[1]
+            guess = guess[guessidx]
 
         if hasattr(self.curve, "curve"):
             temp_curve = self.curve.curve

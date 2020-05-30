@@ -241,24 +241,12 @@ class SimultaneousStrippedCurve(Curve):
             raise TypeError("Allow_extrapolation must be of type 'bool'")
 
         self.curve_type = "Simultaneous_curve"
-        self.curve_one = copy.deepcopy(curve_one)
-        for inst in self.curve_one.instruments:
-            inst.curve = self.curve_one
-
-        self.curve_two = copy.deepcopy(curve_two)
-        for inst in self.curve_two.instruments:
-            inst.curve = self.curve_two
-
-        if id(discount_curve) == id(curve_one):
-            self.discount_curve = self.curve_one
-        elif id(discount_curve) == id(curve_two):
-            self.discount_curve = self.curve_two
-        else:
-            self.discount_curve = copy.deepcopy(discount_curve)
-
+        self.curve_one = curve_one
+        self.curve_two = curve_two
+        self.discount_curve = discount_curve
         self.curve_one.discount_curve = self.discount_curve
-
         self.curve_two.discount_curve = self.discount_curve
+
         self.instruments = []
         self._built = False
         self.allow_extrapolation = allow_extrapolation
@@ -350,13 +338,13 @@ class SimultaneousStrippedCurve(Curve):
     def view(self):
         raise NotImplementedError(
             "Please view the individual curves using the"
-            " self.discount_curve and"
-            " self.projection_curve syntax"
+            " self.curve_one and"
+            " self.curve_two syntax"
         )
 
     def zeros(self):
         raise NotImplementedError(
             "Please view the individual curves using the"
-            " self.discount_curve and"
-            " self.projection_curve syntax"
+            " self.curve_one and"
+            " self.curve_two syntax"
         )

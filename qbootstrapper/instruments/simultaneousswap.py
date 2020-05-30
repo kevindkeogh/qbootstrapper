@@ -55,5 +55,6 @@ class SimultaneousInstrument(Instrument):
         """
         """
         inst_one_pv = self.instrument_one._swap_value(guesses)
-        inst_two_pv = self.instrument_two._swap_value(guesses)
+        inst_two_pv = self.instrument_two._swap_value(guesses, 1)
+
         return max(abs(inst_one_pv), abs(inst_two_pv))

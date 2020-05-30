@@ -130,7 +130,7 @@ class OISSwapInstrument(SwapInstrument):
         """
         return scipy.optimize.newton(self._swap_value, 0)
 
-    def _swap_value(self, guess, args=()):
+    def _swap_value(self, guess, guessidx=0, args=()):
         """Private method used for root finding discount factor
 
         The main function for use with the root-finder. This function returns
@@ -145,8 +145,7 @@ class OISSwapInstrument(SwapInstrument):
 
         """
         if not isinstance(guess, (int, float, long, complex)):
-            # simultaneous bootstrapping sets the guess[0] as the ois guess
-            guess = guess[0]
+            guess = guess[guessidx]
 
         temp_curve = self.curve.curve
         temp_curve = np.append(

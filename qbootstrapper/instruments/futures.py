@@ -179,6 +179,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         calendar=None,
         tenor=None,
         contract_size=100,
+        fixings=None,
     ):
         # assignments
         self.code = code
@@ -189,6 +190,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         self.tenor = tenor if tenor is not None else Tenor("3M")
         self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.contract_size = contract_size
+        self.fixings = fixings
 
         self.effective = imm_date(code)
         self.maturity = self.calendar.adjust(self.effective + self.tenor, "following")
@@ -229,7 +231,6 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
             temp_curve["timestamp"], temp_curve["discount_factor"]
         )
 
-        # SOFR Leg
         df = np.exp(interpolator(np.datetime64(self.maturity).astype("<M8[s]")))
         sofr_forward_rate = self.__forward_rate(interpolator)
         sofr_pv = sofr_forward_rate * self.contract_size * df
@@ -242,8 +243,18 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         """
         """
         start_date = np.datetime64(self.effective).astype("<M8[s]")
-        end_date = np.datetime64(self.maturity).astype("<M8[s]")
         one_day = np.timedelta64(1, "D")
+
+        if self.effective < self.curve.date:
+            fixings = []
+            while start_date < self.curve.date:
+                fixings.append(self.fixings.get(start_date))
+                start_date += one_day
+            fixings = np.array(fixings)
+        else:
+            fixings = np.array([])
+
+        end_date = np.datetime64(self.maturity).astype("<M8[s]")
         start_day = start_date.astype(object).weekday()
         first_dates = np.arange(start_date, end_date, one_day)
         fridays = first_dates[4 - start_day :: 7]
@@ -256,6 +267,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         second_dates = first_dates + one_day
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
-        rates = initial_dfs / end_dfs
-        rate = rates.prod() - 1
+        rates = ((initial_dfs / end_dfs) - 1) * 360
+        rates = np.append(fixings, rates)
+        rate = (1 + rates / 360).prod() - 1
         return rate

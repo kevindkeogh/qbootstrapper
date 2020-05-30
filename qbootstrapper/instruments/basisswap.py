@@ -319,7 +319,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         ois_guess = guesses[0]
         libor_guess = guesses[1]
 
-        discount_curve = np.append(
+        curve_one = np.append(
             self.curve.curve_one.curve,
             np.array(
                 [
@@ -342,10 +342,10 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         leg_one_interpolator = scipy.interpolate.PchipInterpolator(
-            discount_curve["timestamp"], discount_curve["discount_factor"]
+            curve_one["timestamp"], curve_one["discount_factor"]
         )
 
-        projection_curve = np.append(
+        curve_two = np.append(
             self.curve.curve_two.curve,
             np.array(
                 [
@@ -367,10 +367,12 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
             ),
         )
         leg_two_interpolator = scipy.interpolate.PchipInterpolator(
-            projection_curve["timestamp"], projection_curve["discount_factor"]
+            curve_two["timestamp"], curve_two["discount_factor"]
         )
 
-        discount_interpolator = leg_one_interpolator
+        discount_interpolator = scipy.interpolate.PchipInterpolator(
+            self.curve.discount_curve.curve["timestamp"], self.curve.discount_curve.curve["discount_factor"]
+        )
 
         for period in self.leg_one_schedule.periods:
             forward_rate = self.__ois_forward_rate(leg_one_interpolator, period)
@@ -470,7 +472,7 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
         """
         raise NotImplementedError
 
-    def _swap_value(self, guesses):
+    def _swap_value(self, guesses, *_):
         """
         Note that this approach should only be used for a
         SimultaneousStrippedCurve
@@ -482,7 +484,7 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
         ois_guess = guesses[1]
 
         # SOFR curve
-        discount_curve = np.append(
+        curve_one = np.append(
             self.curve.curve_one.curve,
             np.array(
                 [
@@ -505,11 +507,11 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         leg_one_interpolator = scipy.interpolate.PchipInterpolator(
-            discount_curve["timestamp"], discount_curve["discount_factor"]
+            curve_one["timestamp"], curve_one["discount_factor"]
         )
 
         # OIS curve
-        projection_curve = np.append(
+        curve_two = np.append(
             self.curve.curve_two.curve,
             np.array(
                 [
@@ -531,10 +533,12 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
             ),
         )
         leg_two_interpolator = scipy.interpolate.PchipInterpolator(
-            projection_curve["timestamp"], projection_curve["discount_factor"]
+            curve_two["timestamp"], curve_two["discount_factor"]
         )
 
-        discount_interpolator = leg_two_interpolator
+        discount_interpolator = scipy.interpolate.PchipInterpolator(
+            self.curve.discount_curve.curve["timestamp"], self.curve.discount_curve.curve["discount_factor"]
+        )
 
         # SOFR Leg
         for period in self.leg_one_schedule.periods:

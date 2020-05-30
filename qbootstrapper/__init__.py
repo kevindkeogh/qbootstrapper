@@ -16,7 +16,7 @@ from qbootstrapper.instruments import (
     SimultaneousInstrument,
 )
 from qbootstrapper.swapscheduler import Schedule
-from qbootstrapper.utils import Calendar, Tenor, imm_date
+from qbootstrapper.utils import Calendar, Tenor, Fixings, imm_date
 
 
 __all__ = [
@@ -41,5 +41,6 @@ __all__ = [
     "Schedule",
     "Calendar",
     "Tenor",
+    "Fixings",
     "imm_date",
 ]

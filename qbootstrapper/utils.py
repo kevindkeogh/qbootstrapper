@@ -11,8 +11,10 @@ discount factors for swaps are calculated using a root-finding algorithm.
 """
 
 from __future__ import division
+import collections.abc
 import datetime
 import dateutil
+import numpy as np
 import re
 import os
 import pkg_resources
@@ -191,6 +193,41 @@ class Calendar(object):
 
     def is_weekend(self, date):
         return date.weekday() in self.weekends
+
+
+class Fixings:
+    """
+    """
+    def __init__(self, name, fixings=None):
+        self.name = name
+        self.fixings = {}
+
+        if fixings is not None:
+            self.add_fixings(fixings)
+
+    def add_fixings(self, fixings):
+        """
+        """
+        for fixing in fixings:
+            if type(fixing[0]) != np.datetime64:
+                try:
+                    date = np.datetime64(fixing[0]).astype("<M8[s]")
+                except:
+                    raise Exception("Dates must be np.datetime64")
+
+            self.fixings[date] = float(fixing[1]) / 100.
+
+    def get(self, dates):
+        """
+        """
+        if isinstance(dates, collections.abc.Iterable):
+            return [self.fixings[date] for date in dates]
+        else:
+            try:
+                return [self.fixings[dates]]
+            except KeyError:
+                one_day = np.timedelta64(1, "D")
+                return self.get(dates - one_day)
 
 
 def imm_date(imm_code):
