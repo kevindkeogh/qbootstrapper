@@ -11,7 +11,6 @@ in the curve if there are swaps in the curve, otherwise the splines cannot
 build and the curve will fail.
 """
 # python libraries
-import copy
 import datetime
 import numpy as np
 import operator

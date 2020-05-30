@@ -371,7 +371,8 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         discount_interpolator = scipy.interpolate.PchipInterpolator(
-            self.curve.discount_curve.curve["timestamp"], self.curve.discount_curve.curve["discount_factor"]
+            self.curve.discount_curve.curve["timestamp"],
+            self.curve.discount_curve.curve["discount_factor"],
         )
 
         for period in self.leg_one_schedule.periods:
@@ -537,7 +538,8 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         discount_interpolator = scipy.interpolate.PchipInterpolator(
-            self.curve.discount_curve.curve["timestamp"], self.curve.discount_curve.curve["discount_factor"]
+            self.curve.discount_curve.curve["timestamp"],
+            self.curve.discount_curve.curve["discount_factor"],
         )
 
         # SOFR Leg

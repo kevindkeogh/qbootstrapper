@@ -198,6 +198,7 @@ class Calendar(object):
 class Fixings:
     """
     """
+
     def __init__(self, name, fixings=None):
         self.name = name
         self.fixings = {}
@@ -212,10 +213,10 @@ class Fixings:
             if type(fixing[0]) != np.datetime64:
                 try:
                     date = np.datetime64(fixing[0]).astype("<M8[s]")
-                except:
+                except Exception:
                     raise Exception("Dates must be np.datetime64")
 
-            self.fixings[date] = float(fixing[1]) / 100.
+            self.fixings[date] = float(fixing[1]) / 100.0
 
     def get(self, dates):
         """

@@ -217,11 +217,16 @@ usdlibor = qb.LIBORCurve(curve_date, discount_curve=fedfunds)
 
 fedfunds_short = qb.Curve(curve_date)
 usdlibor_short = qb.LIBORCurve(curve_date, discount_curve=fedfunds_short)
-fedfunds_libor = qb.SimultaneousStrippedCurve(curve_date, fedfunds_short, usdlibor_short, fedfunds_short)
+fedfunds_libor = qb.SimultaneousStrippedCurve(
+    curve_date, fedfunds_short, usdlibor_short, fedfunds_short
+)
 
 sofr_short = qb.Curve(curve_date)
 fedfunds_sofr_short = qb.Curve(curve_date)
-sofr_fedfunds = qb.SimultaneousStrippedCurve(curve_date, sofr_short, fedfunds_sofr_short, fedfunds_sofr_short)
+sofr_fedfunds = qb.SimultaneousStrippedCurve(
+    curve_date, sofr_short, fedfunds_sofr_short, fedfunds_sofr_short
+)
+
 
 def prepare_curves():
     # Fed funds build
@@ -237,7 +242,6 @@ def prepare_curves():
 
         fedfunds.add_instrument(inst)
 
-
     # USD LIBOR build
     for (tenor, rate, kind, convention) in usdlibor_instruments:
         if kind.upper() == "CASH":
@@ -245,7 +249,9 @@ def prepare_curves():
         elif kind.upper() == "FUTURES":
             inst = qb.FuturesInstrumentByIMMCode(tenor, rate, usdlibor, **convention)
         elif kind.upper() == "SWAP":
-            inst = qb.LIBORSwapInstrument(effective, tenor, rate, usdlibor, **convention)
+            inst = qb.LIBORSwapInstrument(
+                effective, tenor, rate, usdlibor, **convention
+            )
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
 
@@ -273,9 +279,13 @@ def prepare_curves():
     # Short USD LIBOR curve
     for (tenor, rate, kind, convention) in usdlibor_instruments:
         if kind.upper() == "CASH":
-            inst = qb.LIBORInstrument(effective, rate, tenor, usdlibor_short, **convention)
+            inst = qb.LIBORInstrument(
+                effective, rate, tenor, usdlibor_short, **convention
+            )
         elif kind.upper() == "FUTURES":
-            inst = qb.FuturesInstrumentByIMMCode(tenor, rate, usdlibor_short, **convention)
+            inst = qb.FuturesInstrumentByIMMCode(
+                tenor, rate, usdlibor_short, **convention
+            )
         elif kind.upper() == "SWAP":
             inst = qb.LIBORSwapInstrument(
                 effective, tenor, rate, usdlibor_short, **convention
@@ -380,10 +390,16 @@ def prepare_curves():
             )
 
             ois_inst = qb.OISSwapInstrument(
-                effective, tenor, ois_rate, fedfunds_sofr_short, **fedfunds_swap_conventions
+                effective,
+                tenor,
+                ois_rate,
+                fedfunds_sofr_short,
+                **fedfunds_swap_conventions,
             )
 
-            instrument_pair = qb.SimultaneousInstrument(sofr_inst, ois_inst, sofr_fedfunds)
+            instrument_pair = qb.SimultaneousInstrument(
+                sofr_inst, ois_inst, sofr_fedfunds
+            )
 
             sofr_fedfunds.add_instrument(instrument_pair)
 
