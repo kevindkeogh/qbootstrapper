@@ -50,7 +50,7 @@ class LIBORInstrument(Instrument):
                                   [default: unadjusted]
         calendar (Calendar)     : Calendar used for holiday adjustments
                                   [default: weekends]
-        fixing_lag (Tenor )     : Fixing lag between rate setting and first
+        fixing_lag (Tenor)      : Fixing lag between rate setting and first
                                   accrual date
                                   [default: 0D]
 

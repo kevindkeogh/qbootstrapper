@@ -48,13 +48,6 @@ class BasisSwapInstrument(SwapInstrument):
 
         kwargs (optional)
         -----------------
-        leg_one_fixing_lag=None,
-        leg_two_fixing_lag=None,
-        leg_one_rate_tenor=None,
-        leg_one_rate_basis="act360",
-        leg_two_rate_tenor=None,
-        leg_two_rate_basis="act360",
-    ):
         leg_one_spread (float)              : Spread on the floating rate
                                               for the first leg
                                               [default: 0]
@@ -308,7 +301,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         """
         raise NotImplementedError
 
-    def _swap_value(self, guesses):
+    def _swap_value(self, guesses, *_):
         """
         Note that this approach should only be used for a
         SimultaneousStrippedCurve
@@ -376,7 +369,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         )
 
         for period in self.leg_one_schedule.periods:
-            forward_rate = self.__ois_forward_rate(leg_one_interpolator, period)
+            forward_rate = self.__compound_forward_rate(leg_one_interpolator, period)
             accrual_period = super(AverageIndexBasisSwapInstrument, self).daycount(
                 period["accrual_start"], period["accrual_end"], self.leg_one_basis
             )
@@ -429,9 +422,9 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
 
         libor_leg = self.leg_two_schedule.periods["PV"].sum()
 
-        return abs(ois_leg - libor_leg)
+        return ois_leg - libor_leg
 
-    def __ois_forward_rate(self, interpolator, period):
+    def __compound_forward_rate(self, interpolator, period):
         """Calculate OIS forward rate for a period
         """
         start_date = period["accrual_start"].astype("<M8[s]")
@@ -450,6 +443,7 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
         second_dates = first_dates + one_day
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
+        # TODO: Check that the rate is actual/360
         rates = ((initial_dfs / end_dfs) - 1) * 360
         rate = rates.mean()
         return rate
@@ -465,11 +459,8 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
         self.instrument_type = "compound_index_basis_swap"
 
     def discount_factor(self):
-        """Returns the natural log of each of the OIS and LIBOR discount factors
-        for the swap using the Levenberg-Marquardt method.
-
-        Note that the first guess is the OIS discount factor, the second guess
-        is the LIBOR discount factor
+        """Returns the natural log discount factors for each curve for the
+        basis swap using the Levenberg-Marquardt method.
         """
         raise NotImplementedError
 
@@ -544,7 +535,7 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
 
         # SOFR Leg
         for period in self.leg_one_schedule.periods:
-            forward_rate = self.__ois_forward_rate(
+            forward_rate = self.__compound_forward_rate(
                 leg_one_interpolator, period, self.leg_one_rate_basis
             )
             accrual_period = super(CompoundIndexBasisSwapInstrument, self).daycount(
@@ -566,7 +557,7 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
 
         # OIS Leg
         for period in self.leg_two_schedule.periods:
-            forward_rate = self.__ois_forward_rate(
+            forward_rate = self.__compound_forward_rate(
                 leg_two_interpolator, period, self.leg_two_rate_basis
             )
             accrual_period = super(CompoundIndexBasisSwapInstrument, self).daycount(
@@ -588,8 +579,8 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
 
         return sofr_leg - ois_leg
 
-    def __ois_forward_rate(self, interpolator, period, rate_basis):
-        """Calculate OIS forward rate for a period
+    def __compound_forward_rate(self, interpolator, period, rate_basis):
+        """Calculate daily compounded forward rate for a period
         """
         start_date = period["accrual_start"].astype("<M8[s]")
         end_date = period["accrual_end"].astype("<M8[s]")

@@ -145,8 +145,17 @@ class LIBORSwapInstrument(SwapInstrument):
                     DF[Fixing + tenor]              [rate_tenor]
 
         Arguments:
-            guess (float)   :   guess to be appended to a copy of the attached
-                                curve
+            guess (float)                       : Guess to be appended to a
+                                                  copy of the attached curve
+
+            kwargs (optional)
+            -----------------
+            guessidx (int)                      : Where a list of guesses is
+                                                  provided, the guessidx is
+                                                  used to denote which item in
+                                                  the list is used for this
+                                                  instrument
+                                                  [default: 1]
         """
         if not isinstance(guess, (int, float, long, complex)):
             # simultaneous bootstrapping sets the guess[1] as the libor guess

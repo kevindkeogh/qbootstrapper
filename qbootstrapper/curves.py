@@ -217,7 +217,36 @@ class OISCurve(Curve):
 
 class SimultaneousStrippedCurve(Curve):
     """Implementation of the Curve class for a curve that can simultaneously
-    bootstrap OIS and LIBOR curves using AverageIndexBasisSwap instruments
+    bootstrap, such as OIS and LIBOR curves using AverageIndexBasisSwap
+    instruments
+
+    Arguments:
+        effective_date (datetime)   : Effective date of the curve
+        curve_one (Curve)           : First curve to bootstrap. Note that this
+                                      should be a curve (one of base Curve,
+                                      LIBORCurve, or OISCurve), and should
+                                      already include instruments that aren't
+                                      simultaneous, such as cash, futures, and
+                                      fixed-float swaps
+        curve_two (Curve)           : Second curve to bootstrap. Note that this
+                                      should be a curve (one of base Curve,
+                                      LIBORCurve, or OISCurve), and should
+                                      already include instruments that aren't
+                                      simultaneous, such as cash, futures, and
+                                      fixed-float swaps
+        discount_curve (Curve)      : Discount curve for dual-curve stripping.
+                                      Note that in the typical case, where one
+                                      of the prior two curves is the curve for
+                                      dual-stripping the other, the same curve
+                                      should be referenced here. This should
+                                      not be a copy of one of curve_one or
+                                      curve_two.
+
+        kwargs
+        ------
+        allow_extrapolation (bool)  : Allow extrapolation in curve
+                                      bootstrapping
+                                      [default: True]
     """
 
     def __init__(
@@ -226,7 +255,6 @@ class SimultaneousStrippedCurve(Curve):
         curve_one,
         curve_two,
         discount_curve,
-        projection_discount_curve=False,
         allow_extrapolation=True,
     ):
 

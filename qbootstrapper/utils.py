@@ -196,19 +196,35 @@ class Calendar(object):
 
 
 class Fixings:
-    """
+    """Fixings class to hold and provide historical index fixings.
+
+    Arguments:
+        name (str)                  : Name of the index
+
+        kwargs (optional)
+        -----------------
+        fixings (iterable)          : Iterable of pairs of datetimes and fixing
+                                      amounts
+        scale (float)               : Specify the scale of the fixings
     """
 
-    def __init__(self, name, fixings=None):
+    def __init__(self, name, fixings=None, scale=1):
         self.name = name
         self.fixings = {}
+        self.scale = scale
 
         if fixings is not None:
             self.add_fixings(fixings)
 
-    def add_fixings(self, fixings):
+    def add_fixings(self, fixings, scale=None):
+        """Add fixings to the Fixings object
+        Arguments:
+            fixings (iterable)          : Iterable of pairs of datetimes and
+                                          fixing amounts
+            scale (float)               : Specify the scale of the fixings
         """
-        """
+        if scale is None:
+            scale = self.scale
         for fixing in fixings:
             if type(fixing[0]) != np.datetime64:
                 try:
@@ -216,10 +232,10 @@ class Fixings:
                 except Exception:
                     raise Exception("Dates must be np.datetime64")
 
-            self.fixings[date] = float(fixing[1]) / 100.0
+            self.fixings[date] = float(fixing[1]) / scale
 
     def get(self, dates):
-        """
+        """Get fixings for a date or iterable of dates
         """
         if isinstance(dates, collections.abc.Iterable):
             return [self.fixings[date] for date in dates]

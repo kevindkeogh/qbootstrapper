@@ -140,8 +140,17 @@ class OISSwapInstrument(SwapInstrument):
         fixed swap.
 
         Arguments:
-            guess (float)   :   guess to be appended to a copy of the attached
-                                curve.
+            guess (float)                       : Guess to be appended to a
+                                                  copy of the attached curve
+
+            kwargs (optional)
+            -----------------
+            guessidx (int)                      : Where a list of guesses is
+                                                  provided, the guessidx is
+                                                  used to denote which item in
+                                                  the list is used for this
+                                                  instrument
+                                                  [default: 0]
 
         """
         if not isinstance(guess, (int, float, long, complex)):

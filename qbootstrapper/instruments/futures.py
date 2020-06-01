@@ -142,11 +142,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
     .build() method is called on the curve where this instrument
     has been added.
 
-    The future rate is calculated as the
-
-                         DF[effective]
-                         -------------
-    1 + ((100 - price) / 100 * accrual_days / days_in_year)
+    The future rate is using root finding with Newton's method. A
 
     Arguments:
         code (string)           : IMM Code of the future (e.g., H20)
@@ -165,6 +161,10 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
                                   [default: weekends]
         contract_size (float)   : Notional used for calculating cashflows
                                   [default: 100]
+        fixings (Fixings)       : Fixings object for historical rates. Because
+                                  SOFR futures pay in arrears, some fixings
+                                  will have occurred by the curve date
+                                  [default: None]
 
 
     TODO: Add Futures convexity calculation
@@ -206,7 +206,8 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         return scipy.optimize.newton(self._futures_value, 0)
 
     def _futures_value(self, guess, args=()):
-        """
+        """Calculate the value of the market futures and compare with the value
+        computed by the curve with the root solver.
         """
         if not isinstance(guess, (int, float, long, complex)):
             # simultaneous bootstrapping sets the guess[0] as the ois guess
@@ -240,13 +241,18 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         return sofr_pv - futures_pv
 
     def __forward_rate(self, interpolator):
-        """
+        """Calculate the implied forward rate for a future given a discount
+        factor curve
         """
         start_date = np.datetime64(self.effective).astype("<M8[s]")
         one_day = np.timedelta64(1, "D")
 
         if self.effective < self.curve.date:
             fixings = []
+            if self.fixings is None:
+                raise Exception(
+                    "Fixings object must be supplied when some of the rate fixings for the instrument have been set."
+                )
             while start_date < self.curve.date:
                 fixings.append(self.fixings.get(start_date))
                 start_date += one_day
@@ -267,6 +273,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         second_dates = first_dates + one_day
         initial_dfs = np.exp(interpolator(first_dates))
         end_dfs = np.exp(interpolator(second_dates))
+        # TODO: check that there are 360 rate days in a year
         rates = ((initial_dfs / end_dfs) - 1) * 360
         rates = np.append(fixings, rates)
         rate = (1 + rates / 360).prod() - 1
