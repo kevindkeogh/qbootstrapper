@@ -251,7 +251,8 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
             fixings = []
             if self.fixings is None:
                 raise Exception(
-                    "Fixings object must be supplied when some of the rate fixings for the instrument have been set."
+                    "Fixings object must be supplied when some of the rate "
+                    "fixings for the instrument have been set."
                 )
             while start_date < self.curve.date:
                 fixings.append(self.fixings.get(start_date))
