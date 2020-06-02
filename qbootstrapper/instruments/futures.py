@@ -57,16 +57,24 @@ class FuturesInstrumentByDates(Instrument):
     """
 
     def __init__(
-        self, effective, maturity, price, curve, basis="act360", calendar=None
+        self,
+        effective,
+        maturity,
+        price,
+        curve,
+        basis="act360",
+        calendar=None,
+        spot_lag=None,
     ):
         # assignments
-        self.effective = effective
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
+        self.effective = self.calendar.advance(effective, self.spot_lag)
         self.maturity = maturity
         self.price = price
         self.rate = (100 - price) / 100
         self.curve = curve
         self.basis = basis
-        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.accrual_period = super(FuturesInstrumentByDates, self).daycount(
             self.effective, self.maturity, self.basis
         )
@@ -116,7 +124,16 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
     TODO: Add Futures convexity calculation
     """
 
-    def __init__(self, code, price, curve, basis="act360", calendar=None, tenor=None):
+    def __init__(
+        self,
+        code,
+        price,
+        curve,
+        basis="act360",
+        calendar=None,
+        tenor=None,
+        spot_lag=None,
+    ):
         # assignments
         self.code = code
         self.price = price
@@ -125,8 +142,9 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.basis = basis
         self.tenor = tenor if tenor is not None else Tenor("3M")
         self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
 
-        self.effective = imm_date(code)
+        self.effective = self.calendar.advance(imm_date(code), self.spot_lag)
         self.maturity = self.calendar.adjust(self.effective + self.tenor, "following")
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
@@ -180,19 +198,21 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         tenor=None,
         contract_size=100,
         fixings=None,
+        spot_lag=None,
     ):
         # assignments
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
         self.code = code
         self.price = price
         self.rate = (100 - price) / 100
         self.curve = curve
         self.basis = basis
         self.tenor = tenor if tenor is not None else Tenor("3M")
-        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.contract_size = contract_size
         self.fixings = fixings
 
-        self.effective = imm_date(code)
+        self.effective = self.calendar.advance(imm_date(code), self.spot_lag)
         self.maturity = self.calendar.adjust(self.effective + self.tenor, "following")
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis

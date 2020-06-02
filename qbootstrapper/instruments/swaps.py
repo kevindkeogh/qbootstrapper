@@ -51,13 +51,15 @@ class SwapInstrument(Instrument):
         notional=100,
         rate_tenor=None,
         rate_basis="act360",
+        spot_lag=None,
     ):
 
         # assignments
         self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("0D")
         self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
 
-        self.effective = effective + self.fixing_lag
+        self.effective = self.calendar.advance(effective, self.spot_lag)
         if type(maturity) is datetime.datetime:
             self.maturity = maturity
         elif type(maturity) is Tenor:

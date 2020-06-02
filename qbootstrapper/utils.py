@@ -44,43 +44,40 @@ class Tenor(object):
             raise ValueError("Tenor cannot be blank")
         self.name = name
 
-    def __radd__(self, other):
         if self.name == "ON":
-            kind = "ON"
+            self.num = 1
+            self.kind = "ON"
         else:
-            num = int(re.findall(r"(-?\d+)", self.name)[0])
-            kind = re.findall(r"([a-zA-Z]+)", self.name)[0]
+            self.num = int(re.findall(r"(-?\d+)", self.name)[0])
+            self.kind = re.findall(r"([a-zA-Z]+)", self.name)[0]
 
-        if kind[0] == "Y":
-            return other + dateutil.relativedelta.relativedelta(years=num)
-        elif kind[0] == "M":
-            return other + dateutil.relativedelta.relativedelta(months=num)
-        elif kind[0] == "W":
-            return other + dateutil.relativedelta.relativedelta(weeks=num)
-        elif kind[0] == "D":
-            return other + dateutil.relativedelta.relativedelta(days=num)
-        elif kind == "ON":
+    def __radd__(self, other):
+        if self.kind[0] == "Y":
+            return other + dateutil.relativedelta.relativedelta(years=self.num)
+        elif self.kind[0] == "M":
+            return other + dateutil.relativedelta.relativedelta(months=self.num)
+        elif self.kind[0] == "W":
+            return other + dateutil.relativedelta.relativedelta(weeks=self.num)
+        elif self.kind[0] == "D":
+            return other + dateutil.relativedelta.relativedelta(days=self.num)
+        elif self.kind == "ON":
             return other + dateutil.relativedelta.relativedelta(days=1)
         else:
-            raise ValueError(f"Period: {kind} not recognized")
+            raise ValueError(f"Period: {self.kind} not recognized")
 
     def __rsub__(self, other):
-        if self.name == "ON":
-            return ValueError("Period: ON is cannot be subtracted")
+        if self.kind[0] == "Y":
+            return other - dateutil.relativedelta.relativedelta(years=self.num)
+        elif self.kind[0] == "M":
+            return other - dateutil.relativedelta.relativedelta(months=self.num)
+        elif self.kind[0] == "W":
+            return other - dateutil.relativedelta.relativedelta(weeks=self.num)
+        elif self.kind[0] == "D":
+            return other - dateutil.relativedelta.relativedelta(days=self.num)
+        elif self.kind[0] == "ON":
+            raise ValueError(f"Period: ON not supported for subtraction")
         else:
-            num = int(re.findall(r"(-?\d+)", self.name)[0])
-            kind = re.findall(r"([a-zA-Z]+)", self.name)[0]
-
-        if kind[0] == "Y":
-            return other - dateutil.relativedelta.relativedelta(years=num)
-        elif kind[0] == "M":
-            return other - dateutil.relativedelta.relativedelta(months=num)
-        elif kind[0] == "W":
-            return other - dateutil.relativedelta.relativedelta(weeks=num)
-        elif kind[0] == "D":
-            return other - dateutil.relativedelta.relativedelta(days=num)
-        else:
-            raise ValueError(f"Period: {kind} not recognized")
+            raise ValueError(f"Period: {self.kind} not recognized")
 
 
 class Calendar(object):
@@ -95,10 +92,10 @@ class Calendar(object):
                                       the calendars folder. Note that the
                                       'weekends' calendar is also supported,
                                       but is a no-op.
-        weekends (list of ints)     : A list representing the weekdays that
-                                      should be considered weekends. Monday is
-                                      0, Sunday is 6.
-                                      [default: [5, 6]]
+        weekends (str)              : A string representing which days should
+                                      be considered weekdyas. A weekday is 1,
+                                      a weekend is 0, week starts on Monday.
+                                      [default: 1111100]
 
     Methods:
         advance (                   : A method to advance, using the applicable
@@ -121,10 +118,11 @@ class Calendar(object):
 
     """
 
-    def __init__(self, *args, weekends=[5, 6]):
-        self.holidays = set()
+    def __init__(self, *args, weekends="1111100"):
         self.weekends = weekends
         self.name = ""
+        self.holidays = []
+        self.cal = np.busdaycalendar(self.weekends, self.holidays)
 
         for idx, arg in enumerate(args):
             if arg.lower() == "weekends":
@@ -146,16 +144,27 @@ class Calendar(object):
 
         with open(filepath, "r") as fh:
             for row in fh:
-                dt = datetime.datetime.strptime(row.strip(), "%Y-%m-%d")
-                self.holidays.add(dt)
+                self.holidays.append(row.strip())
+
+        self.cal = np.busdaycalendar(self.weekends, self.holidays)
 
     def advance(self, now, tenor, convention="following"):
-        next_date = now + tenor
-        return self.adjust(next_date, convention)
+        if tenor.kind[0] == "B":
+            dt = np.datetime64(now).astype("<M8[D]")
+            dt = np.busday_offset(dt, tenor.num, roll=convention, busdaycal=self.cal)
+            return datetime.datetime.fromordinal(dt.astype(object).toordinal())
+        else:
+            next_date = now + tenor
+            return self.adjust(next_date, convention)
 
     def reverse(self, now, tenor, convention="following"):
-        prev_date = now - tenor
-        return self.adjust(prev_date, convention)
+        if tenor.kind[0] == "B":
+            dt = np.datetime64(now).astype("<M8[D]")
+            dt = np.busday_offset(dt, tenor.num, roll=convention, busdaycal=self.cal)
+            return datetime.datetime.fromordinal(dt.astype(object).toordinal())
+        else:
+            next_date = now - tenor
+            return self.adjust(next_date, convention)
 
     def adjust(self, date, convention):
         """Method to return a date that is adjusted according to the supplied
@@ -168,31 +177,32 @@ class Calendar(object):
                                         unadjusted
                                         following
                                         preceding
-                                        modified following
+                                        modifiedfollowing
         """
         if convention == "unadjusted":
             return date
 
-        if not self.is_holiday(date) and not self.is_weekend(date):
+        dt = np.datetime64(date).astype("<M8[D]")
+        if self.is_busday(dt):
             return date
 
-        if convention == "following":
-            return self.advance(date, Tenor("1D"), convention)
-        elif convention == "modified following":
-            if self.advance(date, Tenor("1D")).month != date.month:
-                return self.reverse(date, Tenor("1D"), "preceding")
-            else:
-                return self.advance(date, Tenor("1D"), "following")
-        elif convention == "preceding":
-            return self.reverse(date, Tenor("1D"), convention)
-        else:
-            raise ValueError(f"Convention: {convention} not recognized")
+        return datetime.datetime.fromordinal(
+            np.busday_offset(dt, 0, roll=convention, busdaycal=self.cal)
+            .astype(object)
+            .toordinal()
+        )
 
     def is_holiday(self, date):
-        return date in self.holidays
+        dt = np.datetime64(date)
+        return np.is_busday(dt, busdaycal=np.busdaycalendar("1111111", self.holidays))
 
     def is_weekend(self, date):
-        return date.weekday() in self.weekends
+        dt = np.datetime64(date)
+        return np.is_busday(dt)
+
+    def is_busday(self, date):
+        dt = np.datetime64(date)
+        return np.is_busday(dt, busdaycal=self.cal)
 
 
 class Fixings:

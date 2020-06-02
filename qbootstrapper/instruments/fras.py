@@ -59,9 +59,12 @@ class FRAInstrumentByDates(Instrument):
         basis="act360",
         calendar=None,
         payment_adjustment="following",
+        spot_lag=None,
     ):
         # assignments
-        self.effective = effective
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
+        self.effective = self.calendar.advance(effective, self.spot_lag)
         self.maturity = maturity
         self.rate = rate
         self.basis = basis
@@ -69,7 +72,6 @@ class FRAInstrumentByDates(Instrument):
         self.accrual_period = super(FRAInstrumentByDates, self).daycount(
             self.effective, self.maturity, self.basis
         )
-        self.calendar = calendar if calendar is not None else Calendar("weekends")
         self.payment_adjustment = payment_adjustment
         self.instrument_type = "FRA"
 
@@ -121,9 +123,12 @@ class FRAInstrumentByDateAndTenor(Instrument):
         basis="act360",
         calendar=Calendar("weekends"),
         payment_adjustment="following",
+        spot_lag=None,
     ):
         # assignments
-        self.effective = effective
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
+        self.effective = self.calendar.advance(effective, self.spot_lag)
         self.maturity = effective + tenor
         self.tenor = tenor
         self.rate = rate

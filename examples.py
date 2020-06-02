@@ -19,6 +19,7 @@ import qbootstrapper as qb
 fedfunds_conventions = {
     "payment_adjustment": "following",
     "calendar": qb.Calendar("FRB"),
+    "spot_lag": qb.Tenor("0BD"),
 }
 
 fedfunds_swap_conventions = {
@@ -33,17 +34,20 @@ fedfunds_swap_conventions = {
     "fixed_payment_lag": qb.Tenor("2D"),
     "float_payment_lag": qb.Tenor("2D"),
     "calendar": qb.Calendar("FRB"),
+    "spot_lag": qb.Tenor("2BD"),
 }
 
 usdlibor_conventions = {
     "payment_adjustment": "following",
-    "fixing_lag": qb.Tenor("2D"),
+    "calendar": qb.Calendar("NEWYORK"),
+    "spot_lag": qb.Tenor("2BD"),
 }
 
 usdlibor_futures_conventions = {
     "tenor": qb.Tenor("3M"),
     "basis": "act360",
     "calendar": qb.Calendar("NEWYORK"),
+    "spot_lag": qb.Tenor("0BD"),
 }
 
 usdlibor_swap_conventions = {
@@ -59,6 +63,7 @@ usdlibor_swap_conventions = {
     "float_payment_lag": qb.Tenor("0D"),
     "rate_tenor": qb.Tenor("3M"),
     "calendar": qb.Calendar("FRB", "NEWYORK"),
+    "spot_lag": qb.Tenor("2BD"),
 }
 
 fedfunds_libor_conventions = {
@@ -80,17 +85,20 @@ fedfunds_libor_conventions = {
     "leg_two_rate_tenor": qb.Tenor("3M"),
     "leg_two_rate_basis": "act360",
     "calendar": qb.Calendar("FRB", "NEWYORK"),
+    "spot_lag": qb.Tenor("2BD"),
 }
 
 sofr_conventions = {
     "payment_adjustment": "following",
     "calendar": qb.Calendar("FRB"),
+    "spot_lag": qb.Tenor("0BD"),
 }
 
 sofr_futures_conventions = {
     "tenor": qb.Tenor("3M"),
     "basis": "act360",
     "calendar": qb.Calendar("FRB", "NEWYORK"),
+    "spot_lag": qb.Tenor("0BD"),
 }
 
 sofr_fedfunds_conventions = {
@@ -111,6 +119,7 @@ sofr_fedfunds_conventions = {
     "leg_two_rate_tenor": qb.Tenor("ON"),
     "leg_two_rate_basis": "act360",
     "calendar": qb.Calendar("FRB"),
+    "spot_lag": qb.Tenor("2BD"),
 }
 
 fedfunds_instruments = [
@@ -210,7 +219,7 @@ sofr_fedfunds_instruments = [
 
 # Curves
 curve_date = datetime.datetime(2019, 12, 31)
-effective = qb.Calendar("NEWYORK").adjust(curve_date + qb.Tenor("3D"), "following")
+effective = curve_date
 
 fedfunds = qb.Curve(curve_date)
 usdlibor = qb.LIBORCurve(curve_date, discount_curve=fedfunds)
@@ -467,7 +476,7 @@ def create_sofr_fixings():
         reader = csv.reader(fh)
         next(reader)
         for row in reader:
-            sofr.add_fixings([[row[0], row[1]]])
+            sofr.add_fixings([[row[0], row[1]]], scale=100)
 
     return sofr
 

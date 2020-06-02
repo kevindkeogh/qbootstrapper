@@ -148,6 +148,7 @@ class BasisSwapInstrument(SwapInstrument):
         effective,
         maturity,
         curve,
+        spot_lag,
         leg_one_spread=0,
         leg_two_spread=0,
         leg_one_basis="act360",
@@ -219,7 +220,8 @@ class BasisSwapInstrument(SwapInstrument):
         self.leg_two_rate_basis = leg_two_rate_basis
 
         self.calendar = calendar if calendar is not None else Calendar("weekends")
-        self.effective = effective + self.leg_one_fixing_lag
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
+        self.effective = self.calendar.advance(effective, self.spot_lag)
 
         if type(maturity) is datetime.datetime:
             self.maturity = maturity

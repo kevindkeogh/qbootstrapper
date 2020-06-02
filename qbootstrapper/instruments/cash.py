@@ -53,7 +53,6 @@ class LIBORInstrument(Instrument):
         fixing_lag (Tenor)      : Fixing lag between rate setting and first
                                   accrual date
                                   [default: 0D]
-
     """
 
     def __init__(
@@ -65,18 +64,19 @@ class LIBORInstrument(Instrument):
         basis="act360",
         payment_adjustment="unadjusted",
         calendar=None,
-        fixing_lag=None,
+        spot_lag=None,
     ):
         # assignments
-        self.effective = effective
+        self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
+        self.calendar = calendar if calendar is not None else Calendar("weekends")
+        self.effective = self.calendar.advance(effective, self.spot_lag)
         self.rate = rate
         self.tenor = tenor
         self.curve = curve
         self.basis = basis
         self.payment_adjustment = payment_adjustment
-        self.calendar = calendar if calendar is not None else Calendar("weekends")
-        self.fixing_lag = fixing_lag if fixing_lag is not None else Tenor("0D")
         self.instrument_type = "cash"
+        print(self.effective)
 
         # calculations
         self._date_calculations()
