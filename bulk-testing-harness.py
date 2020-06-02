@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 # vim: set fileencoding=utf-8
 """
-Testing for USD OIS and LIBOR qb. Note that these curves are the same
-as the NY DVC curves (in terms of instruments). Using the 31 December 2019 data
-below.
+Bulk testing harness for USD OIS and LIBOR qb.
 """
 import csv
 import datetime
@@ -297,18 +295,18 @@ fedfunds_instruments = [
 
 usdlibor_instruments = [
     (qb.Tenor("3M"), "IR.USD-LIBOR.CASH-3M.MID", "CASH", usdlibor_conventions),
-    #     (1, 1, "FUTURES", usdlibor_futures_conventions),
-    #     (2, 2, "FUTURES", usdlibor_futures_conventions),
-    #     (3, 3, "FUTURES", usdlibor_futures_conventions),
-    #     (4, 4, "FUTURES", usdlibor_futures_conventions),
-    #     (5, 5, "FUTURES", usdlibor_futures_conventions),
-    #     (6, 6, "FUTURES", usdlibor_futures_conventions),
-    #     (7, 7, "FUTURES", usdlibor_futures_conventions),
-    #     (8, 8, "FUTURES", usdlibor_futures_conventions),
-    #     (9, 9, "FUTURES", usdlibor_futures_conventions),
-    #     (10, 10, "FUTURES", usdlibor_futures_conventions),
-    #     (11, 11, "FUTURES", usdlibor_futures_conventions),
-    #     (12, 12, "FUTURES", usdlibor_futures_conventions),
+    (1, 1, "FUTURES", usdlibor_futures_conventions),
+    (2, 2, "FUTURES", usdlibor_futures_conventions),
+    (3, 3, "FUTURES", usdlibor_futures_conventions),
+    (4, 4, "FUTURES", usdlibor_futures_conventions),
+    (5, 5, "FUTURES", usdlibor_futures_conventions),
+    (6, 6, "FUTURES", usdlibor_futures_conventions),
+    (7, 7, "FUTURES", usdlibor_futures_conventions),
+    (8, 8, "FUTURES", usdlibor_futures_conventions),
+    (9, 9, "FUTURES", usdlibor_futures_conventions),
+    (10, 10, "FUTURES", usdlibor_futures_conventions),
+    (11, 11, "FUTURES", usdlibor_futures_conventions),
+    (12, 12, "FUTURES", usdlibor_futures_conventions),
     (qb.Tenor("4Y"), "IR.USD-LIBOR-3M.SWAP-4Y.MID", "SWAP", usdlibor_swap_conventions),
     (qb.Tenor("5Y"), "IR.USD-LIBOR-3M.SWAP-5Y.MID", "SWAP", usdlibor_swap_conventions),
     (qb.Tenor("6Y"), "IR.USD-LIBOR-3M.SWAP-6Y.MID", "SWAP", usdlibor_swap_conventions),
@@ -463,6 +461,51 @@ def get_rate(code, date):
         print(req.json())
 
 
+def next_imm_code(code):
+    letter = code[0]
+    year = code[1:]
+    if letter == "H":
+        next_code = "M"
+    elif letter == "M":
+        next_code = "U"
+    elif letter == "U":
+        next_code = "Z"
+    elif letter == "Z":
+        next_code = "H"
+    else:
+        raise Exception(f"Code not recogized {code}")
+
+    if next_code == "H":
+        return next_code + str(int(year)+1)
+    else:
+        return next_code + year
+
+
+def next_imm_date(date):
+    if type(date) == datetime.datetime:
+        date = date.date()
+    year = date.year
+    if (date.month % 3):
+        month = date.month + (3-(date.month % 3))
+    else:
+        month = date.month
+    imm = datetime.date(year, month, 15)
+    w = imm.weekday()
+    if w != 2:
+        imm = imm.replace(day=(15+(2-w) % 7))
+
+    if date > imm:
+        if date.month == 12:
+            imm = imm.replace(year=imm.year+1, month=1)
+        else:
+            imm = imm.replace(month=imm.month+1)
+        return next_imm_date(imm)
+    else:
+        letter = {3: "H", 6: "M", 9: "U", 12: "Z"}[imm.month]
+        year = str(imm.year)[-2:]
+        return letter + year
+
+
 def load_curve(filename, curve_date):
     dates = []
     dfs = []
@@ -529,11 +572,11 @@ def build_curves(curve_date):
         curve_date, fedfunds_short, usdlibor_short, fedfunds_short
     )
 
-    #     sofr_short = qb.OISCurve(curve_date)
-    #     fedfunds_sofr_short = qb.Curve(curve_date)
-    #     sofr_fedfunds = qb.SimultaneousStrippedCurve(
-    #     curve_date, sofr_short, fedfunds_sofr_short, fedfunds_sofr_short
-    #     )
+    # sofr_short = qb.OISCurve(curve_date)
+    # fedfunds_sofr_short = qb.Curve(curve_date)
+    # sofr_fedfunds = qb.SimultaneousStrippedCurve(
+    # curve_date, sofr_short, fedfunds_sofr_short, fedfunds_sofr_short
+    # )
 
     # Fed funds build
     for (tenor, code, kind, convention) in fedfunds_instruments:
@@ -551,14 +594,22 @@ def build_curves(curve_date):
 
     # USD LIBOR build
     for (tenor, code, kind, convention) in usdlibor_instruments:
-        rate = get_rate(code, curve_date)
         if kind.upper() == "CASH":
+            rate = get_rate(code, curve_date)
             inst = qb.LIBORInstrument(curve_date, rate, tenor, usdlibor, **convention)
         elif kind.upper() == "FUTURES":
+            imm = next_imm_date(curve_date)
+            for i in range(code-1):
+                imm = next_imm_code(imm)
+            # This should be included, but the DVC curves have been built
+            # incorrectly for the last 2Y
+            # if (curve_date.month % 3):
+            #     imm = next_imm_code(imm)
             # FIXME
-            tenor, rate = get_futures(code, curve_date)
-            inst = qb.FuturesInstrumentByIMMCode(tenor, rate, usdlibor, **convention)
+            rate = 99 # get_futures(code, curve_date)
+            inst = qb.FuturesInstrumentByIMMCode(imm, rate, usdlibor, **convention)
         elif kind.upper() == "SWAP":
+            rate = get_rate(code, curve_date)
             inst = qb.LIBORSwapInstrument(
                 curve_date, tenor, rate, usdlibor, **convention
             )
@@ -589,16 +640,24 @@ def build_curves(curve_date):
 
     # Short USD LIBOR curve
     for (tenor, code, kind, convention) in usdlibor_instruments:
-        rate = get_rate(code, curve_date)
         if kind.upper() == "CASH":
+            rate = get_rate(code, curve_date)
             inst = qb.LIBORInstrument(
                 curve_date, rate, tenor, usdlibor_short, **convention
             )
         elif kind.upper() == "FUTURES":
+            imm = next_imm_date(curve_date)
+            for i in range(code):
+                imm = next_imm_code(imm)
+            # if (curve_date.month % 3):
+            #     imm = next_imm_code(imm)
+            # FIXME
+            rate = 99 # get_futures(code, curve_date)
             inst = qb.FuturesInstrumentByIMMCode(
-                tenor, rate, usdlibor_short, **convention
+                imm, rate, usdlibor_short, **convention
             )
         elif kind.upper() == "SWAP":
+            rate = get_rate(code, curve_date)
             inst = qb.LIBORSwapInstrument(
                 curve_date, tenor, rate, usdlibor_short, **convention
             )
@@ -634,8 +693,6 @@ def build_curves(curve_date):
                 **fedfunds_libor_conventions,
             )
 
-            print(tenor.name, code, rate, ibor_rate)
-
             libor_inst = qb.LIBORSwapInstrument(
                 curve_date,
                 tenor,
@@ -655,23 +712,23 @@ def build_curves(curve_date):
 
     # Simultaneous stripped OIS and SOFR curves
     # Short FedFunds curve
-    #     for (tenor, code, kind, convention) in fedfunds_instruments:
-    #         rate = get_rate(code, curve_date)
-    #         if kind.upper() == "CASH":
-    #             inst = qb.instruments.LIBORInstrument(
-    #                 curve_date, rate, tenor, fedfunds_sofr_short, **convention
-    #             )
-    #         elif kind.upper() == "SWAP":
-    #             inst = qb.OISSwapInstrument(
-    #                 curve_date, tenor, rate, fedfunds_sofr_short, **convention
-    #             )
-    #         else:
-    #             raise Exception("Instrument type {} not recognized".format(kind))
-    #
-    #         if inst.maturity >= (curve_date + sofr_fedfunds_instruments[0][0]):
-    #             break
-    #
-    #         fedfunds_sofr_short.add_instrument(inst)
+    # for (tenor, code, kind, convention) in fedfunds_instruments:
+    #     rate = get_rate(code, curve_date)
+    #     if kind.upper() == "CASH":
+    #         inst = qb.instruments.LIBORInstrument(
+    #             curve_date, rate, tenor, fedfunds_sofr_short, **convention
+    #         )
+    #     elif kind.upper() == "SWAP":
+    #         inst = qb.OISSwapInstrument(
+    #             curve_date, tenor, rate, fedfunds_sofr_short, **convention
+    #         )
+    #     else:
+    #         raise Exception("Instrument type {} not recognized".format(kind))
+
+    #     if inst.maturity >= (curve_date + sofr_fedfunds_instruments[0][0]):
+    #         break
+
+    #     fedfunds_sofr_short.add_instrument(inst)
 
     # Short SOFR curve
     #     sofr_fixings = create_sofr_fixings()
@@ -691,54 +748,54 @@ def build_curves(curve_date):
     #         sofr_short.add_instrument(inst)
 
     # Simultaneous curve instruments
-    #     for (tenor, rate, kind, convention) in sofr_fedfunds_instruments:
-    #         if kind.upper() == "SOFR-OIS-SWAP":
-    #             ois_rate = None
-    #
-    #             for idx, inst in enumerate(fedfunds_instruments):
-    #                 try:
-    #                     if inst[0].name == tenor.name:
-    #                         ois_rate = inst[1]
-    #                         break
-    #                 except AttributeError:
-    #                     pass
-    #             else:
-    #                 continue
-    #
-    #             sofr_inst = qb.CompoundIndexBasisSwapInstrument(
-    #                 curve_date, tenor, sofr_fedfunds, leg_one_spread=rate, **convention,
-    #             )
-    #
-    #             ois_inst = qb.OISSwapInstrument(
-    #                 curve_date,
-    #                 tenor,
-    #                 ois_rate,
-    #                 fedfunds_sofr_short,
-    #                 **fedfunds_swap_conventions,
-    #             )
-    #
-    #             instrument_pair = qb.SimultaneousInstrument(
-    #                 sofr_inst, ois_inst, sofr_fedfunds
-    #             )
-    #
-    #             sofr_fedfunds.add_instrument(instrument_pair)
-    #
+    # for (tenor, rate, kind, convention) in sofr_fedfunds_instruments:
+    #     if kind.upper() == "SOFR-OIS-SWAP":
+    #         ois_rate = None
+
+    #         for idx, inst in enumerate(fedfunds_instruments):
+    #             try:
+    #                 if inst[0].name == tenor.name:
+    #                     ois_rate = inst[1]
+    #                     break
+    #             except AttributeError:
+    #                 pass
     #         else:
-    #             raise Exception("Instrument type {} not recognized".format(kind))
+    #             continue
+
+    #         sofr_inst = qb.CompoundIndexBasisSwapInstrument(
+    #             curve_date, tenor, sofr_fedfunds, leg_one_spread=rate, **convention,
+    #         )
+
+    #         ois_inst = qb.OISSwapInstrument(
+    #             curve_date,
+    #             tenor,
+    #             ois_rate,
+    #             fedfunds_sofr_short,
+    #             **fedfunds_swap_conventions,
+    #         )
+
+    #         instrument_pair = qb.SimultaneousInstrument(
+    #             sofr_inst, ois_inst, sofr_fedfunds
+    #         )
+
+    #         sofr_fedfunds.add_instrument(instrument_pair)
+
+    #     else:
+    #         raise Exception("Instrument type {} not recognized".format(kind))
 
     dvc_ois = load_curve("/home/kevindkeogh/Downloads/OIS123119USD.crv", curve_date)
     dvc_3ml = load_curve("/home/kevindkeogh/Downloads/3MLOIS123119USD.crv", curve_date)
     # dvc_sofr = load_curve("/home/kevindkeogh/Downloads/SOF123119USD.crv", curve_date)
 
-    #     print("")
-    #     print("Simultaneously bootstrapped SOFR-FedFunds")
-    #     sofr_fedfunds.build()
-    #     print("")
-    #     print("    SOFR")
-    #     compare_curves(dvc_sofr, sofr_fedfunds.curve_one)
-    #     print("")
-    #     print("    FedFunds")
-    #     compare_curves(dvc_ois, sofr_fedfunds.curve_two)
+    # print("")
+    # print("Simultaneously bootstrapped SOFR-FedFunds")
+    # sofr_fedfunds.build()
+    # print("")
+    # print("    SOFR")
+    # compare_curves(dvc_sofr, sofr_fedfunds.curve_one)
+    # print("")
+    # print("    FedFunds")
+    # compare_curves(dvc_ois, sofr_fedfunds.curve_two)
 
     print("")
     print("Simultaneously bootstrapped FedFunds-LIBOR")
@@ -763,5 +820,32 @@ def build_curves(curve_date):
 
 
 if __name__ == "__main__":
-    dt = datetime.datetime(2019, 12, 31)
-    build_curves(dt)
+    dates = [
+        "2018-01-31",
+        "2018-02-28",
+        "2018-03-29",
+        "2018-04-30",
+        "2018-05-31",
+        "2018-06-29",
+        "2018-07-31",
+        "2018-08-31",
+        "2018-09-28",
+        "2018-10-31",
+        "2018-11-30",
+        "2018-12-31",
+        "2019-01-31",
+        "2019-02-28",
+        "2019-03-29",
+        "2019-04-30",
+        "2019-05-31",
+        "2019-06-28",
+        "2019-07-31",
+        "2019-08-30",
+        "2019-09-30",
+        "2019-10-31",
+        "2019-11-29",
+        "2019-12-31",
+    ]
+    for date in dates:
+        dt = datetime.datetime.strptime(date, "%Y-%m-%d")
+        build_curves(dt)
