@@ -219,7 +219,6 @@ sofr_fedfunds_instruments = [
 
 # Curves
 curve_date = datetime.datetime(2019, 12, 31)
-effective = curve_date
 
 fedfunds = qb.Curve(curve_date)
 usdlibor = qb.LIBORCurve(curve_date, discount_curve=fedfunds)
@@ -245,7 +244,7 @@ def prepare_curves():
                 curve_date, rate, tenor, fedfunds, **convention
             )
         elif kind.upper() == "SWAP":
-            inst = qb.OISSwapInstrument(effective, tenor, rate, fedfunds, **convention)
+            inst = qb.OISSwapInstrument(curve_date, tenor, rate, fedfunds, **convention)
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
 
@@ -254,12 +253,12 @@ def prepare_curves():
     # USD LIBOR build
     for (tenor, rate, kind, convention) in usdlibor_instruments:
         if kind.upper() == "CASH":
-            inst = qb.LIBORInstrument(effective, rate, tenor, usdlibor, **convention)
+            inst = qb.LIBORInstrument(curve_date, rate, tenor, usdlibor, **convention)
         elif kind.upper() == "FUTURES":
             inst = qb.FuturesInstrumentByIMMCode(tenor, rate, usdlibor, **convention)
         elif kind.upper() == "SWAP":
             inst = qb.LIBORSwapInstrument(
-                effective, tenor, rate, usdlibor, **convention
+                curve_date, tenor, rate, usdlibor, **convention
             )
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
@@ -275,7 +274,7 @@ def prepare_curves():
             )
         elif kind.upper() == "SWAP":
             inst = qb.OISSwapInstrument(
-                effective, tenor, rate, fedfunds_short, **convention
+                curve_date, tenor, rate, fedfunds_short, **convention
             )
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
@@ -289,7 +288,7 @@ def prepare_curves():
     for (tenor, rate, kind, convention) in usdlibor_instruments:
         if kind.upper() == "CASH":
             inst = qb.LIBORInstrument(
-                effective, rate, tenor, usdlibor_short, **convention
+                curve_date, rate, tenor, usdlibor_short, **convention
             )
         elif kind.upper() == "FUTURES":
             inst = qb.FuturesInstrumentByIMMCode(
@@ -297,7 +296,7 @@ def prepare_curves():
             )
         elif kind.upper() == "SWAP":
             inst = qb.LIBORSwapInstrument(
-                effective, tenor, rate, usdlibor_short, **convention
+                curve_date, tenor, rate, usdlibor_short, **convention
             )
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
@@ -323,7 +322,7 @@ def prepare_curves():
                 continue
 
             ois_inst = qb.AverageIndexBasisSwapInstrument(
-                effective,
+                curve_date,
                 tenor,
                 fedfunds_libor,
                 leg_one_spread=rate,
@@ -331,7 +330,7 @@ def prepare_curves():
             )
 
             libor_inst = qb.LIBORSwapInstrument(
-                effective, tenor, ibor_rate, fedfunds_libor, **usdlibor_swap_conventions
+                curve_date, tenor, ibor_rate, fedfunds_libor, **usdlibor_swap_conventions
             )
 
             instrument_pair = qb.SimultaneousInstrument(
@@ -352,7 +351,7 @@ def prepare_curves():
             )
         elif kind.upper() == "SWAP":
             inst = qb.OISSwapInstrument(
-                effective, tenor, rate, fedfunds_sofr_short, **convention
+                curve_date, tenor, rate, fedfunds_sofr_short, **convention
             )
         else:
             raise Exception("Instrument type {} not recognized".format(kind))
@@ -395,11 +394,11 @@ def prepare_curves():
                 continue
 
             sofr_inst = qb.CompoundIndexBasisSwapInstrument(
-                effective, tenor, sofr_fedfunds, leg_one_spread=rate, **convention,
+                curve_date, tenor, sofr_fedfunds, leg_one_spread=rate, **convention,
             )
 
             ois_inst = qb.OISSwapInstrument(
-                effective,
+                curve_date,
                 tenor,
                 ois_rate,
                 fedfunds_sofr_short,

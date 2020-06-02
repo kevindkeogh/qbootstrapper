@@ -76,7 +76,6 @@ class LIBORInstrument(Instrument):
         self.basis = basis
         self.payment_adjustment = payment_adjustment
         self.instrument_type = "cash"
-        print(self.effective)
 
         # calculations
         self._date_calculations()

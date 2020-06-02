@@ -35,8 +35,8 @@ class Tenor(object):
     meaning (tenor - date?)
 
     Arguments:
-        name (string)               : The named tenor, supports ON, D, W{,K},
-                                      M{,O}, and Y{,R}
+        name (string)               : The named tenor, supports ON, D, BD,
+                                      W{,K}, M{,O}, and Y{,R}
     """
 
     def __init__(self, name=None, *args):
@@ -87,7 +87,7 @@ class Calendar(object):
     day conventions.
 
     Arguments:
-        names (string)              : A variable number of strings representing
+        names (str)                 : A variable number of strings representing
                                       holiday centers. These can be found in
                                       the calendars folder. Note that the
                                       'weekends' calendar is also supported,
