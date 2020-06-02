@@ -330,7 +330,11 @@ def prepare_curves():
             )
 
             libor_inst = qb.LIBORSwapInstrument(
-                curve_date, tenor, ibor_rate, fedfunds_libor, **usdlibor_swap_conventions
+                curve_date,
+                tenor,
+                ibor_rate,
+                fedfunds_libor,
+                **usdlibor_swap_conventions,
             )
 
             instrument_pair = qb.SimultaneousInstrument(

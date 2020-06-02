@@ -75,7 +75,7 @@ class Tenor(object):
         elif self.kind[0] == "D":
             return other - dateutil.relativedelta.relativedelta(days=self.num)
         elif self.kind[0] == "ON":
-            raise ValueError(f"Period: ON not supported for subtraction")
+            raise ValueError("Period: ON not supported for subtraction")
         else:
             raise ValueError(f"Period: {self.kind} not recognized")
 

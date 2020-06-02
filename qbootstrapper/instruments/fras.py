@@ -16,7 +16,7 @@ import sys
 
 # qlib libraries
 from qbootstrapper.instruments import Instrument
-from qbootstrapper.utils import Calendar
+from qbootstrapper.utils import Calendar, Tenor
 
 if sys.version_info > (3,):
     long = int
