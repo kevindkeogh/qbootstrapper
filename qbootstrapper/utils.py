@@ -198,7 +198,7 @@ class Calendar(object):
 
     def is_weekend(self, date):
         dt = np.datetime64(date)
-        return np.is_busday(dt)
+        return not np.is_busday(dt)
 
     def is_busday(self, date):
         dt = np.datetime64(date)
