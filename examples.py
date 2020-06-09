@@ -8,6 +8,8 @@ below.
 import csv
 import datetime
 import time
+import pprint
+import json
 
 import numpy as np
 import scipy.interpolate
@@ -521,6 +523,10 @@ def main():
     print("")
     print("    FedFunds")
     compare_curves(dvc_ois, fedfunds)
+
+    jsonstr = fedfunds_libor.curve_two.json()
+    parsed = json.loads(jsonstr)
+    print(json.dumps(parsed, indent=4))
 
 
 if __name__ == "__main__":

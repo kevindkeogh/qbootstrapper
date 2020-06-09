@@ -12,6 +12,7 @@ build and the curve will fail.
 """
 # python libraries
 import datetime
+import json
 import numpy as np
 import operator
 import scipy.interpolate
@@ -209,15 +210,31 @@ class Curve(object):
 
     def summary(self):
         """Returns a summary of the curve"""
+        if not self._built:
+            self.build()
+
         return np.rec.fromarrays(
             [
-                self.curve["maturity"],
+                self.curve["maturity"].astype(object),
                 self.curve["name"],
                 self.curve["par_rate"],
                 np.exp(self.curve["discount_factor"]),
             ],
             names=["maturity", "name", "par rate", "discount_factor"],
         )
+
+    def json(self):
+        """Returns a JSON representation of the summary of the curve"""
+        def converter(o):
+            if isinstance(o, datetime.date):
+                return o.strftime("%Y-%m-%d")
+            elif isinstance(o, bytes):
+                return o.decode("utf8")
+
+        rec = self.summary()
+        dicts = [dict(zip(rec.dtype.names, i)) for i in rec]
+
+        return json.dumps(dicts, default=converter)
 
 
 class LIBORCurve(Curve):
