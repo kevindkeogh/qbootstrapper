@@ -225,6 +225,7 @@ class Curve(object):
 
     def json(self):
         """Returns a JSON representation of the summary of the curve"""
+
         def converter(o):
             if isinstance(o, datetime.date):
                 return o.strftime("%Y-%m-%d")
