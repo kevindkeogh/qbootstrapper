@@ -54,14 +54,20 @@ class SimultaneousInstrument(Instrument):
     """
 
     def __init__(
-        self, instrument_one, instrument_two, curve, method="SLSQP", disp=False,
+        self,
+        instrument_one,
+        instrument_two,
+        curve,
+        method="SLSQP",
+        disp=False,
+        name=None,
     ):
 
         self.instrument_one = instrument_one
         self.instrument_two = instrument_two
         self.method = method
         self.disp = disp
-        self.instrument_type = "simultaneous_instrument"
+        self.name = name if name is not None else "SWAP-SIMULTANEOUS"
 
     def discount_factor(self):
         """Method to return the discount factor for both instruments

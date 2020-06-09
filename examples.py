@@ -15,7 +15,6 @@ import tabulate
 
 import qbootstrapper as qb
 
-
 fedfunds_conventions = {
     "payment_adjustment": "following",
     "calendar": qb.Calendar("FRB"),

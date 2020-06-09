@@ -52,6 +52,7 @@ class SwapInstrument(Instrument):
         rate_tenor=None,
         rate_basis="act360",
         spot_lag=None,
+        name=None,
     ):
 
         # assignments
@@ -61,8 +62,10 @@ class SwapInstrument(Instrument):
 
         self.effective = self.calendar.advance(effective, self.spot_lag)
         if type(maturity) is datetime.datetime:
+            self.tenor = None
             self.maturity = maturity
         elif type(maturity) is Tenor:
+            self.tenor = maturity
             self.maturity = self.calendar.advance(
                 self.effective, maturity, "unadjusted"
             )
@@ -96,6 +99,8 @@ class SwapInstrument(Instrument):
 
         self.rate_tenor = rate_tenor if rate_tenor is not None else Tenor("ON")
         self.rate_basis = rate_basis
+
+        self.name = name if name is not None else "SWAP"
 
         self._set_schedules()
 

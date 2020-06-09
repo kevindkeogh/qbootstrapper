@@ -476,7 +476,7 @@ def next_imm_code(code):
         raise Exception(f"Code not recogized {code}")
 
     if next_code == "H":
-        return next_code + str(int(year)+1)
+        return next_code + str(int(year) + 1)
     else:
         return next_code + year
 
@@ -485,20 +485,20 @@ def next_imm_date(date):
     if type(date) == datetime.datetime:
         date = date.date()
     year = date.year
-    if (date.month % 3):
-        month = date.month + (3-(date.month % 3))
+    if date.month % 3:
+        month = date.month + (3 - (date.month % 3))
     else:
         month = date.month
     imm = datetime.date(year, month, 15)
     w = imm.weekday()
     if w != 2:
-        imm = imm.replace(day=(15+(2-w) % 7))
+        imm = imm.replace(day=(15 + (2 - w) % 7))
 
     if date > imm:
         if date.month == 12:
-            imm = imm.replace(year=imm.year+1, month=1)
+            imm = imm.replace(year=imm.year + 1, month=1)
         else:
-            imm = imm.replace(month=imm.month+1)
+            imm = imm.replace(month=imm.month + 1)
         return next_imm_date(imm)
     else:
         letter = {3: "H", 6: "M", 9: "U", 12: "Z"}[imm.month]
@@ -599,14 +599,14 @@ def build_curves(curve_date):
             inst = qb.LIBORInstrument(curve_date, rate, tenor, usdlibor, **convention)
         elif kind.upper() == "FUTURES":
             imm = next_imm_date(curve_date)
-            for i in range(code-1):
+            for i in range(code - 1):
                 imm = next_imm_code(imm)
             # This should be included, but the DVC curves have been built
             # incorrectly for the last 2Y
             # if (curve_date.month % 3):
             #     imm = next_imm_code(imm)
             # FIXME
-            rate = 99 # get_futures(code, curve_date)
+            rate = 99  # get_futures(code, curve_date)
             inst = qb.FuturesInstrumentByIMMCode(imm, rate, usdlibor, **convention)
         elif kind.upper() == "SWAP":
             rate = get_rate(code, curve_date)
@@ -652,7 +652,7 @@ def build_curves(curve_date):
             # if (curve_date.month % 3):
             #     imm = next_imm_code(imm)
             # FIXME
-            rate = 99 # get_futures(code, curve_date)
+            rate = 99  # get_futures(code, curve_date)
             inst = qb.FuturesInstrumentByIMMCode(
                 imm, rate, usdlibor_short, **convention
             )

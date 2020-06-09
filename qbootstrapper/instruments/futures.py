@@ -52,6 +52,8 @@ class FuturesInstrumentByDates(Instrument):
                                   [default: act360]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
+        name (string)           : Name of the instrument
+                                  [default: 'FUTURES-{effective}-{maturity}']
 
     TODO: Add Futures convexity calculation
     """
@@ -65,6 +67,7 @@ class FuturesInstrumentByDates(Instrument):
         basis="act360",
         calendar=None,
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.calendar = calendar if calendar is not None else Calendar("weekends")
@@ -78,7 +81,15 @@ class FuturesInstrumentByDates(Instrument):
         self.accrual_period = super(FuturesInstrumentByDates, self).daycount(
             self.effective, self.maturity, self.basis
         )
-        self.instrument_type = "futures"
+        if name:
+            self.name = name
+        else:
+            self.name = (
+                "FUTURES-"
+                + self.effective.strftime("%Y-%-m-%d")
+                + "-"
+                + self.maturity.strftime("%Y-%m-%d")
+            )
 
     def discount_factor(self):
         """Method for returning the discount factor for a future
@@ -119,6 +130,8 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
                                   [default: 3M]
         calendar (Calendar)     : Calendar used for payment date adjustment
                                   [default: weekends]
+        name (string)           : Name of the instrument
+                                  [default: 'FUTURES-{code}']
 
 
     TODO: Add Futures convexity calculation
@@ -133,6 +146,7 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         calendar=None,
         tenor=None,
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.code = code
@@ -149,7 +163,10 @@ class FuturesInstrumentByIMMCode(FuturesInstrumentByDates):
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )
-        self.instrument_type = "futures"
+        if name:
+            self.name = name
+        else:
+            self.name = "FUTURES-" + self.code
 
 
 class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
@@ -199,6 +216,7 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         contract_size=100,
         fixings=None,
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.calendar = calendar if calendar is not None else Calendar("weekends")
@@ -217,7 +235,11 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
         self.accrual_period = super(FuturesInstrumentByIMMCode, self).daycount(
             self.effective, self.maturity, self.basis
         )
-        self.instrument_type = "futures"
+
+        if name:
+            self.name = name
+        else:
+            self.name = "FUTURES-COMPOUND-" + self.code
 
     def discount_factor(self):
         """Returns the discount factor for the futures using Newton's method
@@ -241,6 +263,8 @@ class CompoundFuturesInstrumentByIMMCode(FuturesInstrumentByIMMCode):
                     (
                         np.datetime64(self.maturity.strftime("%Y-%m-%d")),
                         time.mktime(self.maturity.timetuple()),
+                        self.name,
+                        np.float64(0),
                         guess,
                     )
                 ],

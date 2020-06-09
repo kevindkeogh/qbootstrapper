@@ -10,11 +10,12 @@ Note that cash and forward instruments calculate discount factors analytically,
 discount factors for swaps are calculated using a root-finding algorithm.
 """
 # python libraries
-from __future__ import division
+from __future__ import division, annotations
 import numpy as np
 import sys
 
 # qlib libraries
+import qbootstrapper as qb
 from qbootstrapper.instruments import Instrument
 from qbootstrapper.utils import Calendar, Tenor
 
@@ -53,6 +54,8 @@ class LIBORInstrument(Instrument):
         fixing_lag (Tenor)      : Fixing lag between rate setting and first
                                   accrual date
                                   [default: 0D]
+        name (string)           : Name of the instrument
+                                  [default: 'BASIS-SWAP-{maturity}']
     """
 
     def __init__(
@@ -60,11 +63,12 @@ class LIBORInstrument(Instrument):
         effective,
         rate,
         tenor,
-        curve,
+        curve: qb.Curve,
         basis="act360",
         payment_adjustment="unadjusted",
         calendar=None,
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.spot_lag = spot_lag if spot_lag is not None else Tenor("0D")
@@ -75,7 +79,7 @@ class LIBORInstrument(Instrument):
         self.curve = curve
         self.basis = basis
         self.payment_adjustment = payment_adjustment
-        self.instrument_type = "cash"
+        self.name = name if name is not None else "CASH-" + tenor.name
 
         # calculations
         self._date_calculations()

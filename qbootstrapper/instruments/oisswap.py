@@ -118,11 +118,17 @@ class OISSwapInstrument(SwapInstrument):
                                               base Instrument class for
                                               implemented conventions.
                                               [default: 'act360']
+        name (string)                       : Name of the instrument
+                                              [default: 'SWAP-OIS-{maturity}']
     """
 
     def __init__(self, *args, **kwargs):
         super(OISSwapInstrument, self).__init__(*args, **kwargs)
-        self.instrument_type = "ois_swap"
+        if self.name is "SWAP":
+            if self.tenor:
+                self.name = "SWAP-OIS-" + self.tenor.name
+            else:
+                self.name = "SWAP-OIS-" + self.maturity.strftime("%Y-%m-%d")
 
     def discount_factor(self):
         """Returns the discount factor for the swap using Newton's method
@@ -172,6 +178,8 @@ class OISSwapInstrument(SwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        np.float64(0),
                         guess,
                     )
                 ],

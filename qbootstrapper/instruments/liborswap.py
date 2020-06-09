@@ -117,11 +117,17 @@ class LIBORSwapInstrument(SwapInstrument):
                                               base Instrument class for
                                               implemented conventions.
                                               [default: 'act360']
+        name (string)                       : Name of the instrument
+                                              [default: 'SWAP-LIBOR-{maturity}']
     """
 
     def __init__(self, *args, **kwargs):
         super(LIBORSwapInstrument, self).__init__(*args, **kwargs)
-        self.instrument_type = "libor_swap"
+        if self.name is "SWAP":
+            if self.tenor:
+                self.name = "SWAP-LIBOR-" + self.tenor.name
+            else:
+                self.name = "SWAP-LIBOR-" + self.maturity.strftime("%Y-%m-%d")
 
     def discount_factor(self):
         """Returns the natural log of the discount factor for the swap
@@ -181,6 +187,8 @@ class LIBORSwapInstrument(SwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        self.rate,
                         guess,
                     )
                 ],

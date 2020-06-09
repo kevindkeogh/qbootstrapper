@@ -18,7 +18,7 @@ import scipy.interpolate
 import time
 
 # qlib libraries
-import qbootstrapper.instruments as instruments
+import qbootstrapper as qb
 
 
 class Curve(object):
@@ -32,6 +32,7 @@ class Curve(object):
 
         kwargs
         ------
+        name (str)                  : Curve name
         discount_curve (Curve)      : Discount curve for dual curve bootstrap
                                       [default: False]
         allow_extrapolation (bool)  : Boolean for allowing the interpolant
@@ -49,7 +50,9 @@ class Curve(object):
                                       interpolant can extrapolate
     """
 
-    def __init__(self, effective_date, discount_curve=False, allow_extrapolation=True):
+    def __init__(
+        self, effective_date, name=None, discount_curve=False, allow_extrapolation=True
+    ):
         if type(effective_date) is not datetime.datetime:
             raise TypeError("Effective date must be of type datetime.datetime")
 
@@ -64,18 +67,23 @@ class Curve(object):
                 (
                     np.datetime64(effective_date.strftime("%Y-%m-%d")),
                     time.mktime(effective_date.timetuple()),
+                    "NA",
+                    np.float64(0),
                     np.log(1),
                 )
             ],
             dtype=[
                 ("maturity", "datetime64[D]"),
                 ("timestamp", np.float64),
+                ("name", "a30"),
+                ("par_rate", np.float64),
                 ("discount_factor", np.float64),
             ],
         )
 
         self.date = effective_date
-        self.curve_type = "IR_curve"
+        self.curve_type = "CURVE"
+        self.name = name if name is not None else "CURVE"
         self.discount_curve = discount_curve
         self.instruments = []
         self._built = False
@@ -84,7 +92,7 @@ class Curve(object):
     def add_instrument(self, instrument):
         """Add an instrument to the curve
         """
-        if isinstance(instrument, instruments.Instrument):
+        if isinstance(instrument, qb.Instrument):
             self._built = False
             self.instruments.append(instrument)
         else:
@@ -97,24 +105,38 @@ class Curve(object):
         self.instruments.sort(key=operator.attrgetter("maturity"))
         for instrument in self.instruments:
             discount_factor = instrument.discount_factor()
-            if instrument.instrument_type in ["cash", "fra", "futures"]:
+            if not isinstance(instrument, qb.SwapInstrument):
                 curve_date = instrument.maturity
             else:
                 curve_date = instrument.fixed_schedule.periods[-1][
                     "payment_date"
                 ].astype(object)
 
+            if hasattr(instrument, "price"):
+                rate = instrument.price
+            elif hasattr(instrument, "leg_one_spread"):
+                if abs(instrument.leg_one_spread) > abs(instrument.leg_two_spread):
+                    rate = instrument.leg_one_spread
+                else:
+                    rate = instrument.leg_one_spread
+            else:
+                rate = instrument.rate
+
             array = np.array(
                 [
                     (
                         np.datetime64(curve_date.strftime("%Y-%m-%d")),
                         time.mktime(curve_date.timetuple()),
+                        instrument.name,
+                        np.float64(rate),
                         discount_factor,
                     )
                 ],
                 dtype=[
                     ("maturity", "datetime64[D]"),
                     ("timestamp", np.float64),
+                    ("name", "a30"),
+                    ("par_rate", np.float64),
                     ("discount_factor", np.float64),
                 ],
             )
@@ -185,6 +207,18 @@ class Curve(object):
         if ret:
             return maturities, zero_rates
 
+    def summary(self):
+        """Returns a summary of the curve"""
+        return np.rec.fromarrays(
+            [
+                self.curve["maturity"],
+                self.curve["name"],
+                self.curve["par_rate"],
+                np.exp(self.curve["discount_factor"]),
+            ],
+            names=["maturity", "name", "par rate", "discount_factor"],
+        )
+
 
 class LIBORCurve(Curve):
     """Implementation of the Curve class for LIBOR curves.
@@ -194,7 +228,8 @@ class LIBORCurve(Curve):
 
     def __init__(self, *args, **kwargs):
         super(LIBORCurve, self).__init__(*args, **kwargs)
-        self.curve_type = "LIBOR_curve"
+        if self.name is "CURVE":
+            self.name = "CURVE-LIBOR"
 
     def build(self):
         """Checks to see if the discount curve has already been built before
@@ -212,7 +247,8 @@ class OISCurve(Curve):
 
     def __init__(self, *args, **kwargs):
         super(OISCurve, self).__init__(*args, **kwargs)
-        self.curve_type = "OIS_curve"
+        if self.name is "CURVE":
+            self.name = "CURVE-OIS"
 
 
 class SimultaneousStrippedCurve(Curve):
@@ -244,6 +280,7 @@ class SimultaneousStrippedCurve(Curve):
 
         kwargs
         ------
+        name (str)                  : Curve name
         allow_extrapolation (bool)  : Allow extrapolation in curve
                                       bootstrapping
                                       [default: True]
@@ -255,6 +292,7 @@ class SimultaneousStrippedCurve(Curve):
         curve_one,
         curve_two,
         discount_curve,
+        name=None,
         allow_extrapolation=True,
     ):
 
@@ -267,7 +305,7 @@ class SimultaneousStrippedCurve(Curve):
         if type(allow_extrapolation) is not bool:
             raise TypeError("Allow_extrapolation must be of type 'bool'")
 
-        self.curve_type = "Simultaneous_curve"
+        self.name = name if name is not None else "CURVE-SIMULTANEOUS"
         self.curve_one = curve_one
         self.curve_two = curve_two
         self.discount_curve = discount_curve
@@ -316,11 +354,25 @@ class SimultaneousStrippedCurve(Curve):
                         elif maybe > last_date:
                             last_date = maybe
 
+                if hasattr(instrument.instrument_one, "price"):
+                    rate = instrument.instrument_one.price
+                elif hasattr(instrument.instrument_one, "leg_one_spread"):
+                    if abs(instrument.instrument_one.leg_one_spread) > abs(
+                        instrument.instrument_one.leg_two_spread
+                    ):
+                        rate = instrument.instrument_one.leg_one_spread
+                    else:
+                        rate = instrument.instrument_one.leg_two_spread
+                else:
+                    rate = instrument.instrument_one.rate
+
                 array = np.array(
                     [
                         (
                             np.datetime64(last_date.strftime("%Y-%m-%d")),
                             time.mktime(last_date.timetuple()),
+                            instrument.instrument_one.name,
+                            np.float64(rate),
                             leg_one_df,
                         )
                     ],
@@ -346,11 +398,25 @@ class SimultaneousStrippedCurve(Curve):
                         elif maybe > last_date:
                             last_date = maybe
 
+                if hasattr(instrument.instrument_two, "price"):
+                    rate = instrument.instrument_two.price
+                elif hasattr(instrument.instrument_two, "leg_one_spread"):
+                    if abs(instrument.instrument_two.leg_one_spread) > abs(
+                        instrument.instrument_two.leg_two_spread
+                    ):
+                        rate = instrument.instrument_two.leg_one_spread
+                    else:
+                        rate = instrument.instrument_two.leg_two_spread
+                else:
+                    rate = instrument.instrument_two.rate
+
                 array = np.array(
                     [
                         (
                             np.datetime64(last_date.strftime("%Y-%m-%d")),
                             time.mktime(last_date.timetuple()),
+                            instrument.instrument_two.name,
+                            np.float64(rate),
                             leg_two_df,
                         )
                     ],

@@ -141,6 +141,8 @@ class BasisSwapInstrument(SwapInstrument):
                                               base Instrument class for
                                               implemented conventions.
                                               [default: 'act360']
+        name (string)                       : Name of the instrument
+                                              [default: 'SWAP-BASIS-{maturity}']
     """
 
     def __init__(
@@ -171,11 +173,10 @@ class BasisSwapInstrument(SwapInstrument):
         leg_one_rate_basis="act360",
         leg_two_rate_tenor=None,
         leg_two_rate_basis="act360",
+        name=None,
     ):
 
         # assignments
-        self.instrument_type = "basis_swap"
-
         if bool(second):
             self.second = second
         if bool(penultimate):
@@ -224,13 +225,23 @@ class BasisSwapInstrument(SwapInstrument):
         self.effective = self.calendar.advance(effective, self.spot_lag)
 
         if type(maturity) is datetime.datetime:
+            self.tenor = None
             self.maturity = maturity
         elif type(maturity) is Tenor:
+            self.tenor = maturity
             self.maturity = self.calendar.advance(
                 self.effective, maturity, "unadjusted"
             )
         else:
             raise ValueError("Maturity must be of type datetime or Tenor")
+
+        if name is None:
+            if self.tenor:
+                self.name = "SWAP-BASIS-" + self.tenor.name
+            else:
+                self.name = "SWAP-BASIS-" + self.maturity.strftime("%Y-%m-%d")
+        else:
+            self.name = name
 
         self._set_schedules()
 
@@ -292,7 +303,11 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
 
     def __init__(self, *args, **kwargs):
         super(AverageIndexBasisSwapInstrument, self).__init__(*args, **kwargs)
-        self.instrument_type = "average_index_basis_swap"
+        if self.name.startswith("SWAP-BASIS"):
+            if self.tenor:
+                self.name = "SWAP-AVERAGEINDEX-" + self.tenor.name
+            else:
+                self.name = "SWAP-AVERAGEINDEX-" + self.maturity.strftime("%Y-%m-%d")
 
     def discount_factor(self):
         """Returns the natural log of each of the OIS and LIBOR discount factors
@@ -329,6 +344,8 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        np.float64(self.leg_one_spread),
                         ois_guess,
                     )
                 ],
@@ -355,6 +372,8 @@ class AverageIndexBasisSwapInstrument(BasisSwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        np.float64(self.leg_one_spread),
                         libor_guess,
                     )
                 ],
@@ -458,7 +477,11 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
 
     def __init__(self, *args, **kwargs):
         super(CompoundIndexBasisSwapInstrument, self).__init__(*args, **kwargs)
-        self.instrument_type = "compound_index_basis_swap"
+        if self.name.startswith("SWAP-BASIS"):
+            if self.tenor:
+                self.name = "SWAP-COMPOUNDINDEX-" + self.tenor.name
+            else:
+                self.name = "SWAP-COMPOUNDINDEX-" + self.maturity.strftime("%Y-%m-%d")
 
     def discount_factor(self):
         """Returns the natural log discount factors for each curve for the
@@ -493,6 +516,8 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        np.float64(0),
                         sofr_guess,
                     )
                 ],
@@ -520,6 +545,8 @@ class CompoundIndexBasisSwapInstrument(BasisSwapInstrument):
                             .astype(object)
                             .timetuple()
                         ),
+                        self.name,
+                        np.float64(0),
                         ois_guess,
                     )
                 ],

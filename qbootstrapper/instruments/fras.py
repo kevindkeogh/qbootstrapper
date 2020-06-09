@@ -48,6 +48,8 @@ class FRAInstrumentByDates(Instrument):
                                   [default: weekends]
         payment_adjustment (str): Payment date adjustment convention
                                   [default: following]
+        name (string)           : Name of the instrument
+                                  [default: 'FRA-{effective}-{maturity}']
     """
 
     def __init__(
@@ -60,6 +62,7 @@ class FRAInstrumentByDates(Instrument):
         calendar=None,
         payment_adjustment="following",
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.calendar = calendar if calendar is not None else Calendar("weekends")
@@ -73,7 +76,15 @@ class FRAInstrumentByDates(Instrument):
             self.effective, self.maturity, self.basis
         )
         self.payment_adjustment = payment_adjustment
-        self.instrument_type = "FRA"
+        if name:
+            self.name = name
+        else:
+            self.name = (
+                "FRA-"
+                + self.effective.strftime("%Y-%-m-%d")
+                + "-"
+                + self.maturity.strftime("%Y-%m-%d")
+            )
 
         self.payment = calendar.adjust(self.maturity, self.payment_adjustment)
 
@@ -112,6 +123,8 @@ class FRAInstrumentByDateAndTenor(Instrument):
                                   [default: weekends]
         payment_adjustment (str): Payment date adjustment convention
                                   [default: following]
+        name (string)           : Name of the instrument
+                                  [default: 'FRA-{effective}-{maturity}']
     """
 
     def __init__(
@@ -124,6 +137,7 @@ class FRAInstrumentByDateAndTenor(Instrument):
         calendar=Calendar("weekends"),
         payment_adjustment="following",
         spot_lag=None,
+        name=None,
     ):
         # assignments
         self.calendar = calendar if calendar is not None else Calendar("weekends")
@@ -142,7 +156,15 @@ class FRAInstrumentByDateAndTenor(Instrument):
         )
 
         self.payment = calendar.adjust(self.maturity, self.payment_adjustment)
-        self.instrument_type = "fra"
+        if name:
+            self.name = name
+        else:
+            self.name = (
+                "FRA-"
+                + self.effective.strftime("%Y-%-m-%d")
+                + "-"
+                + self.maturity.strftime("%Y-%m-%d")
+            )
 
     def discount_factor(self):
         """Method for returning the discount factor for a FRA
