@@ -220,7 +220,7 @@ class Curve(object):
                 self.curve["par_rate"],
                 np.exp(self.curve["discount_factor"]),
             ],
-            names=["maturity", "name", "par rate", "discount_factor"],
+            names=["maturity", "name", "par_rate", "discount_factor"],
         )
 
     def json(self):
